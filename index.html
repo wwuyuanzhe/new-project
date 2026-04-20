@@ -1079,6 +1079,10 @@
       flex: 1;
     }
 
+    #overviewSheet.feedback-sheet #closeOverviewSheet {
+      display: none !important;
+    }
+
     .worker-today {
       padding: 16px;
       display: grid;
@@ -4188,6 +4192,8 @@
       const content = document.getElementById("overviewSheetContent");
       const actions = document.getElementById("overviewSheetActions");
       const closeButton = document.getElementById("closeOverviewSheet");
+      sheet.classList.remove("feedback-sheet");
+      closeButton.style.display = "";
       document.getElementById("overviewSheetTitle").textContent = title;
       content.innerHTML = "";
       actions.hidden = true;
@@ -4315,9 +4321,11 @@
       const content = document.getElementById("overviewSheetContent");
       const actions = document.getElementById("overviewSheetActions");
       const closeButton = document.getElementById("closeOverviewSheet");
+      sheet.classList.add("feedback-sheet");
       document.getElementById("overviewSheetTitle").textContent = "给妈妈的反馈";
       content.innerHTML = "";
       closeButton.hidden = true;
+      closeButton.style.display = "none";
       actions.hidden = false;
       actions.innerHTML = `
         <button class="action" type="button" id="sheetMarkFeedbackReadBtn">标记反馈已读</button>
@@ -4341,6 +4349,9 @@
       });
       document.getElementById("sheetCloseFeedbackBtn").addEventListener("click", () => {
         sheet.hidden = true;
+        sheet.classList.remove("feedback-sheet");
+        closeButton.hidden = false;
+        closeButton.style.display = "";
       });
       sheet.hidden = false;
     }
@@ -4669,15 +4680,21 @@
     });
 
       document.getElementById("closeOverviewSheet").addEventListener("click", () => {
-        document.getElementById("overviewSheet").hidden = true;
+        const sheet = document.getElementById("overviewSheet");
+        sheet.hidden = true;
+        sheet.classList.remove("feedback-sheet");
         document.getElementById("overviewSheetActions").hidden = true;
         document.getElementById("closeOverviewSheet").hidden = false;
+        document.getElementById("closeOverviewSheet").style.display = "";
       });
 
       document.getElementById("overviewSheetBackdrop").addEventListener("click", () => {
-        document.getElementById("overviewSheet").hidden = true;
+        const sheet = document.getElementById("overviewSheet");
+        sheet.hidden = true;
+        sheet.classList.remove("feedback-sheet");
         document.getElementById("overviewSheetActions").hidden = true;
         document.getElementById("closeOverviewSheet").hidden = false;
+        document.getElementById("closeOverviewSheet").style.display = "";
       });
 
     document.getElementById("closeReassignSheet").addEventListener("click", closeReassignSheet);
