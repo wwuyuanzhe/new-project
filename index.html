@@ -2034,7 +2034,11 @@
 
     function followUpText(id) {
       if (!id || id === "none") return appLanguage === "en" ? "None" : "无";
-      return memberById(id).name;
+      return String(id)
+        .split(",")
+        .filter(Boolean)
+        .map(item => memberById(item).name)
+        .join("、") || (appLanguage === "en" ? "None" : "无");
     }
 
     function shouldShowFollowUp(task) {
@@ -3006,6 +3010,73 @@
       }
     }
 
+    function addLinkedScheduleBatch({ personIds, title, time, location, rideMode, companionIds = [], driverId = "driver", date = state.selectedDate }) {
+      const people = personIds.map(memberById);
+      const selectedCompanions = companionIds.filter(id => id && id !== "none");
+      const groupId = uid();
+      const peopleText = people.map(person => person.name).join("、");
+      const groupTitle = `${peopleText} ${title}`;
+      const start = timeToMinutes(time);
+      const companionText = selectedCompanions.map(id => memberById(id).name).join("、");
+      const followUp = selectedCompanions.length ? selectedCompanions.join(",") : (rideMode !== "no" ? driverId : "none");
+
+      personIds.forEach(personId => {
+        const person = memberById(personId);
+        createTask({
+          title: `${person.name}：${title}`,
+          assignee: personId,
+          date,
+          location,
+          time,
+          groupId,
+          groupTitle,
+          relationLabel: `${person.name}本人`,
+          followUp,
+          prep: suggestSchedulePrep(personId, title, location)
+        });
+      });
+
+      if (rideMode !== "no") {
+        const driver = memberById(driverId);
+        const rideTitle = rideMode === "pickup"
+          ? `接${peopleText}${title}结束`
+          : rideMode === "dropoff"
+            ? `送${peopleText}去${title}`
+            : `接送${peopleText}去${title}`;
+        createTask({
+          title: rideTitle,
+          assignee: driverId,
+          date,
+          location: location === "none" ? "outdoor-parking" : location,
+          time: rideMode === "pickup" ? time : minutesToTime(clampDayMinutes(start - 30)),
+          groupId,
+          groupTitle,
+          relationLabel: `${driver.name}接送`,
+          prep: "提前确认人数、路线、车钥匙、停车点和随身物品；接送完成后有变化再反馈。"
+        });
+      }
+
+      selectedCompanions.forEach(companionId => {
+        createTask({
+          title: `跟进${peopleText}${title}`,
+          assignee: companionId,
+          date,
+          location,
+          time: minutesToTime(clampDayMinutes(start - 25)),
+          groupId,
+          groupTitle,
+          relationLabel: `${memberById(companionId).name}执行`,
+          prep: `确认${peopleText}的时间、地点和需要带的物品；有变化再反馈给妈妈或陈管家。`
+        });
+      });
+
+      state.notices.unshift({
+        id: uid(),
+        text: `已保存「${groupTitle}」：每个人 1 条主任务，${driverId && rideMode !== "no" ? "接送已合并，" : ""}${companionText ? `跟进人是 ${companionText}。` : "未指定跟进人。"}`,
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      });
+    }
+
     function suggestSchedulePrep(personId, title, location) {
       const person = memberById(personId);
       if (/会议|公司|开会|见客|工作/.test(title)) {
@@ -3639,23 +3710,15 @@
       const executors = selectedValues(document.getElementById("scheduleCompanion"));
       const companionIds = executors.length ? executors : ["none"];
       const date = document.getElementById("scheduleDate").value || state.selectedDate;
-      personIds.forEach(personId => {
-        companionIds.forEach(companionId => addLinkedSchedule({
-          personId,
-          title,
-          time: document.getElementById("scheduleTime").value || "09:00",
-          location: document.getElementById("scheduleLocation").value,
-          rideMode: document.getElementById("scheduleRide").value,
-          companionId,
-          driverId: document.getElementById("scheduleDriver").value,
-          date,
-          suppressNotice: personIds.length * companionIds.length > 1
-        }));
-      });
-      state.notices.unshift({
-        id: uid(),
-        text: `已保存「${title}」，共生成 ${personIds.length * companionIds.length} 组相关事项。`,
-        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      addLinkedScheduleBatch({
+        personIds,
+        title,
+        time: document.getElementById("scheduleTime").value || "09:00",
+        location: document.getElementById("scheduleLocation").value,
+        rideMode: document.getElementById("scheduleRide").value,
+        companionIds,
+        driverId: document.getElementById("scheduleDriver").value,
+        date
       });
       document.getElementById("scheduleTitle").value = "";
       save();
