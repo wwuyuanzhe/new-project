@@ -2286,6 +2286,7 @@
 
     let appLanguage = "zh";
     let dailyRoutines = loadRoutines();
+    const feedbackRetentionMs = 3 * 24 * 60 * 60 * 1000;
 
     const state = {
       selectedMember: "all",
@@ -2428,6 +2429,7 @@
     }
 
     function save() {
+      pruneExpiredFeedbacks(false);
       localStorage.setItem("familyTasks", JSON.stringify(state.tasks));
       localStorage.setItem("familyNotices", JSON.stringify(state.notices.slice(0, 30)));
       localStorage.setItem("familyRoutines", JSON.stringify(dailyRoutines));
@@ -2451,6 +2453,7 @@
     }
 
     function addFeedback(fromId, text) {
+      pruneExpiredFeedbacks();
       state.feedbacks.unshift({
         id: uid(),
         from: fromId,
@@ -4222,8 +4225,23 @@
       return feedback.createdAt || 1;
     }
 
+    function recentFeedbacks() {
+      const cutoff = Date.now() - feedbackRetentionMs;
+      return state.feedbacks.filter(feedback => feedbackCreatedAt(feedback) >= cutoff);
+    }
+
+    function pruneExpiredFeedbacks(persist = true) {
+      const recent = recentFeedbacks();
+      if (recent.length !== state.feedbacks.length) {
+        state.feedbacks = recent;
+        if (persist) {
+          localStorage.setItem("familyFeedbacks", JSON.stringify(state.feedbacks.slice(0, 30)));
+        }
+      }
+    }
+
     function unreadFeedbacks() {
-      return state.feedbacks.filter(feedback => feedbackCreatedAt(feedback) > state.feedbackReadAt);
+      return recentFeedbacks().filter(feedback => feedbackCreatedAt(feedback) > state.feedbackReadAt);
     }
 
     function renderMomDashboard() {
@@ -4231,6 +4249,7 @@
       const dot = document.getElementById("feedbackUnreadDot");
       const canSee = state.selectedMember === "all" && isManagerUser();
       const feedbackCard = document.querySelector(".dashboard-card.feedback-alert");
+      pruneExpiredFeedbacks();
       dashboard.style.display = canSee ? "" : "none";
       if (feedbackCard) feedbackCard.hidden = !canSeeMomFeedback();
       dot.hidden = true;
@@ -4258,7 +4277,7 @@
       document.getElementById("upcomingCount").textContent = upcoming.length;
       dot.textContent = unread.length;
       dot.hidden = !canSeeMomFeedback() || unread.length === 0;
-      document.getElementById("latestFeedbackText").textContent = canSeeMomFeedback() && state.feedbacks.length
+      document.getElementById("latestFeedbackText").textContent = canSeeMomFeedback() && recentFeedbacks().length
         ? `${unread.length} 条未读，点这里查看`
         : canSeeMomFeedback() ? "暂无新的反馈" : "";
       document.getElementById("todayIssueText").textContent = tasks.length
@@ -4311,7 +4330,7 @@
         openTaskSummary(`${selectedDateLabel()}全部事项`, tasks, { groupByPerson: true });
       };
       if (feedbackCard && canSeeMomFeedback()) {
-        feedbackCard.onclick = () => openFeedbackSummary(unread.length ? unread : state.feedbacks);
+        feedbackCard.onclick = () => openFeedbackSummary(unread.length ? unread : recentFeedbacks());
       }
     }
 
@@ -4345,7 +4364,7 @@
         state.feedbackReadAt = Date.now();
         save();
         render();
-        openFeedbackSummary(state.feedbacks);
+        openFeedbackSummary(recentFeedbacks());
       });
       document.getElementById("sheetCloseFeedbackBtn").addEventListener("click", () => {
         sheet.hidden = true;
@@ -4379,12 +4398,14 @@
       head.style.display = canSee ? "" : "none";
       list.style.display = canSee ? "" : "none";
       if (!canSee) return;
+      pruneExpiredFeedbacks();
+      const feedbacks = recentFeedbacks();
       list.innerHTML = "";
-      if (!state.feedbacks.length) {
+      if (!feedbacks.length) {
         list.innerHTML = `<div class="empty">这里是给妈妈看的反馈。</div>`;
         return;
       }
-      state.feedbacks.slice(0, 8).forEach(feedback => {
+      feedbacks.slice(0, 8).forEach(feedback => {
         const item = document.createElement("div");
         item.className = "feedback";
         item.textContent = `${feedback.time}  ${memberById(feedback.from).name}：${feedback.text}`;
@@ -4461,6 +4482,7 @@
 
     function render() {
       try {
+        pruneExpiredFeedbacks();
         document.querySelectorAll("[data-date-text]").forEach(element => {
           element.textContent = selectedDateDisplayText();
         });
