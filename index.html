@@ -101,19 +101,20 @@
     }
 
     .date-button {
-      width: 34px;
-      height: 34px;
+      width: 40px;
+      height: 40px;
       border-radius: 8px;
       background: rgba(247, 248, 250, 0.92);
       border: 1px solid var(--line);
       color: var(--ink);
+      font-size: 20px;
       font-weight: 900;
       box-shadow: var(--glow);
     }
 
     .date-today-btn {
-      min-height: 34px;
-      padding: 0 10px;
+      min-height: 38px;
+      padding: 0 13px;
     }
 
     .date-input {
@@ -1313,11 +1314,11 @@
       .date-pill {
         width: 100%;
         display: grid;
-        grid-template-columns: 28px minmax(0, 1fr) 28px 44px;
+        grid-template-columns: 36px minmax(0, 1fr) 36px 58px;
         justify-content: stretch;
         min-height: 32px;
-        padding: 6px;
-        gap: 5px;
+        padding: 6px 8px;
+        gap: 12px;
         white-space: normal;
         font-size: 12px;
       }
@@ -1366,7 +1367,7 @@
         grid-column: 4;
         grid-row: 1;
         width: 100%;
-        min-height: 28px;
+        min-height: 34px;
         padding: 0;
         font-size: 12px;
       }
@@ -1409,8 +1410,9 @@
       }
 
       .date-button {
-        width: 28px;
-        height: 28px;
+        width: 36px;
+        height: 34px;
+        font-size: 20px;
       }
 
       .layout {
@@ -1987,9 +1989,9 @@
         <div class="mom-dashboard" id="momDashboard">
           <div class="dashboard-grid">
             <div class="dashboard-card feedback-alert">
-              <span class="dashboard-label">未读私密反馈 <span class="red-dot" id="feedbackUnreadDot" hidden>0</span></span>
+              <span class="dashboard-label">给妈妈的反馈 <span class="red-dot" id="feedbackUnreadDot" hidden>0</span></span>
               <b class="dashboard-number" id="unreadFeedbackCount">0</b>
-              <span class="dashboard-note" id="latestFeedbackText">暂无新的私密反馈</span>
+              <span class="dashboard-note" id="latestFeedbackText">暂无新的反馈</span>
             </div>
             <div class="dashboard-card alert">
               <span class="dashboard-label" id="dayTotalLabel">当天全部事项</span>
@@ -2009,7 +2011,7 @@
           </div>
           <div class="dashboard-list" id="momFocusList"></div>
           <div class="dashboard-actions">
-            <button class="action" type="button" id="showFeedbackBtn">查看私密反馈</button>
+            <button class="action" type="button" id="showFeedbackBtn">查看反馈</button>
             <button class="action" type="button" id="markFeedbackReadBtn">标记反馈已读</button>
           </div>
         </div>
@@ -2025,7 +2027,7 @@
         </div>
         <div class="notice-list" id="noticeList"></div>
         <div class="panel-head" id="privateFeedbackHead">
-          <h2>妈妈私密反馈</h2>
+          <h2>给妈妈的反馈</h2>
         </div>
         <div class="notice-list" id="privateFeedbackList"></div>
       </aside>
@@ -2464,6 +2466,10 @@
 
     function isManagerUser() {
       return ["mom", "driver"].includes(state.currentUser);
+    }
+
+    function canSeeMomFeedback() {
+      return state.currentUser === "mom";
     }
 
     function canAddContent() {
@@ -4204,13 +4210,18 @@
       const dashboard = document.getElementById("momDashboard");
       const dot = document.getElementById("feedbackUnreadDot");
       const canSee = state.selectedMember === "all" && isManagerUser();
+      const feedbackCard = document.querySelector(".dashboard-card.feedback-alert");
+      const feedbackActions = document.querySelector(".dashboard-actions");
+      const markFeedbackReadBtn = document.getElementById("markFeedbackReadBtn");
       dashboard.style.display = canSee ? "" : "none";
-      dot.hidden = !canSee;
+      if (feedbackCard) feedbackCard.hidden = true;
+      if (feedbackActions) feedbackActions.hidden = !canSeeMomFeedback();
+      if (markFeedbackReadBtn) markFeedbackReadBtn.hidden = true;
+      dot.hidden = true;
       if (!canSee) return;
 
       const tasks = selectedDayTasks();
       const openTasks = tasks.filter(task => task.status !== "done");
-      const todayFeedbacks = unreadFeedbacks();
       const now = new Date();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const upcoming = openTasks
@@ -4222,7 +4233,6 @@
         .sort((a, b) => a.time.localeCompare(b.time))
         .slice(0, 3);
       const unread = unreadFeedbacks();
-      const latestFeedback = state.feedbacks[0];
 
       document.getElementById("dayTotalLabel").textContent = `${selectedDateLabel()}全部事项`;
       document.getElementById("dayOpenLabel").textContent = `${selectedDateLabel()}未完成`;
@@ -4231,11 +4241,8 @@
       document.getElementById("todayOpenCount").textContent = openTasks.length;
       document.getElementById("upcomingCount").textContent = upcoming.length;
       dot.textContent = unread.length;
-      dot.hidden = unread.length === 0;
-
-      document.getElementById("latestFeedbackText").textContent = latestFeedback
-        ? `${memberById(latestFeedback.from).name}：${latestFeedback.text}`
-        : "暂无新的私密反馈";
+      dot.hidden = true;
+      document.getElementById("latestFeedbackText").textContent = "只在妈妈的反馈页显示";
       document.getElementById("todayIssueText").textContent = tasks.length
         ? `上午 ${tasks.filter(task => timeToMinutes(task.time || "09:00") < 12 * 60).length} / 下午 ${tasks.filter(task => timeToMinutes(task.time || "09:00") >= 12 * 60 && timeToMinutes(task.time || "09:00") < 18 * 60).length} / 晚上 ${tasks.filter(task => timeToMinutes(task.time || "09:00") >= 18 * 60).length}`
         : `${selectedDateLabel()}暂无事项`;
@@ -4264,10 +4271,6 @@
           title: `${task.time} 马上开始：${task.title}`,
           value: memberById(task.assignee).name
         })),
-        ...todayFeedbacks.slice(0, 2).map(feedback => ({
-          title: `反馈：${feedback.text}`,
-          value: memberById(feedback.from).name
-        })),
         ...busyPeople.map(item => ({
           title: `${item.member.name} ${selectedDateLabel()}有 ${item.total} 项`,
           value: `${item.open} 未完成`
@@ -4286,21 +4289,19 @@
         focus.appendChild(item);
       });
 
-      document.querySelector(".dashboard-card.feedback-alert").onclick = () => {
-        openFeedbackSummary(unread.length ? unread : state.feedbacks);
-      };
       document.querySelector(".dashboard-card.alert").onclick = () => {
         openTaskSummary(`${selectedDateLabel()}全部事项`, tasks, { groupByPerson: true });
       };
     }
 
     function openFeedbackSummary(feedbacks) {
+      if (!canSeeMomFeedback()) return;
       const sheet = document.getElementById("overviewSheet");
       const content = document.getElementById("overviewSheetContent");
-      document.getElementById("overviewSheetTitle").textContent = "私密反馈";
+      document.getElementById("overviewSheetTitle").textContent = "给妈妈的反馈";
       content.innerHTML = "";
       if (!feedbacks.length) {
-        content.innerHTML = `<div class="empty">暂无私密反馈。</div>`;
+        content.innerHTML = `<div class="empty">暂无给妈妈的反馈。</div>`;
       } else {
         feedbacks.forEach(feedback => {
           const item = document.createElement("div");
@@ -4331,13 +4332,13 @@
     function renderPrivateFeedback() {
       const head = document.getElementById("privateFeedbackHead");
       const list = document.getElementById("privateFeedbackList");
-      const canSee = isManagerUser() && (state.selectedMember === "all" || state.selectedMember === "mom");
+      const canSee = canSeeMomFeedback() && state.selectedMember === "mom";
       head.style.display = canSee ? "" : "none";
       list.style.display = canSee ? "" : "none";
       if (!canSee) return;
       list.innerHTML = "";
       if (!state.feedbacks.length) {
-        list.innerHTML = `<div class="empty">这里是只给妈妈看的反馈。</div>`;
+        list.innerHTML = `<div class="empty">这里是给妈妈看的反馈。</div>`;
         return;
       }
       state.feedbacks.slice(0, 8).forEach(feedback => {
@@ -4613,6 +4614,7 @@
     document.getElementById("generateAllBtn").addEventListener("click", generateAllRoutines);
 
     document.getElementById("showFeedbackBtn").addEventListener("click", () => {
+      if (!canSeeMomFeedback()) return;
       state.selectedMember = "mom";
       state.actionMode = "natural";
       render();
@@ -4620,6 +4622,7 @@
     });
 
     document.getElementById("markFeedbackReadBtn").addEventListener("click", () => {
+      if (!canSeeMomFeedback()) return;
       state.feedbackReadAt = Date.now();
       save();
       render();
