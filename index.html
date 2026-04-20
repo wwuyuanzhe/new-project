@@ -2665,19 +2665,36 @@
         });
       } else if (isScheduleRequest(clean)) {
         const time = extractTime(clean) || inferTimeFromPeriod(clean, "15:00");
-        const companion = hasCompanionMention(clean) ? detectCompanion(clean) : defaultCompanionForSchedule(clean);
+        const personIds = detectPersonIds(clean, requesterId);
+        const companionIds = detectCompanions(clean);
+        const companion = companionIds[0] || (hasCompanionMention(clean) ? detectCompanion(clean) : defaultCompanionForSchedule(clean));
         const dates = repeatDatesForRequest(clean);
-        dates.forEach(date => addLinkedSchedule({
-          personId,
-          title: extractActivityTitle(clean),
-          time,
-          location: inferLocation(clean),
-          rideMode: inferRideMode(clean),
-          companionId: companion,
-          driverId: detectDriver(clean),
-          date,
-          suppressNotice: dates.length > 1
-        }));
+        dates.forEach(date => {
+          if (personIds.length > 1 || companionIds.length > 1) {
+            addLinkedScheduleBatch({
+              personIds,
+              title: extractActivityTitle(clean),
+              time,
+              location: inferLocation(clean),
+              rideMode: inferRideMode(clean),
+              companionIds: companionIds.length ? companionIds : [companion],
+              driverId: detectDriver(clean),
+              date
+            });
+            return;
+          }
+          addLinkedSchedule({
+            personId: personIds[0] || personId,
+            title: extractActivityTitle(clean),
+            time,
+            location: inferLocation(clean),
+            rideMode: inferRideMode(clean),
+            companionId: companion,
+            driverId: detectDriver(clean),
+            date,
+            suppressNotice: dates.length > 1
+          });
+        });
         state.notices.unshift({
           id: uid(),
           text: dates.length > 1
@@ -2884,11 +2901,11 @@
     }
 
     function isRecognizableClause(text) {
-      return /吃|喝|吃饭|面包|酸奶|牛奶|水果|早饭|早餐|午饭|午餐|晚饭|晚餐|睡觉|起床|散步|按摩|兴趣班|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|围棋|上课|课外|培训/.test(text);
+      return /吃|喝|吃饭|面包|酸奶|牛奶|水果|早饭|早餐|午饭|午餐|晚饭|晚餐|睡觉|起床|散步|按摩|兴趣班|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|围棋|上课|课外|培训|画展|展览|音乐会|演出/.test(text);
     }
 
     function isScheduleRequest(text) {
-      return /睡觉|起床|散步|按摩|兴趣班|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|围棋|上课|课外|培训/.test(text);
+      return /睡觉|起床|散步|按摩|兴趣班|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|围棋|上课|课外|培训|画展|展览|音乐会|演出|看展/.test(text);
     }
 
     function hasCompanionMention(text) {
@@ -2902,6 +2919,9 @@
 
     function inferRideMode(text) {
       if (/不接送|不用接送|不需要接送|睡觉|起床|散步|按摩/.test(text)) return "no";
+      if (/接送/.test(text)) return "yes";
+      if (/只接|接回|接.*结束/.test(text)) return "pickup";
+      if (/只送|送去|送\b|送，|送。|送$/.test(text)) return "dropoff";
       return "yes";
     }
 
@@ -2911,6 +2931,22 @@
       if (/姥姥|外婆/.test(text)) return "grandma";
       if (/姥爷|外公/.test(text)) return "grandpa";
       return detectChildId(text, fallbackId);
+    }
+
+    function detectPersonIds(text, fallbackId) {
+      const ids = [];
+      const add = id => {
+        if (id && !ids.includes(id)) ids.push(id);
+      };
+      if (/妈妈|张老师|张辉/.test(text)) add("mom");
+      if (/爸爸/.test(text)) add("dad");
+      if (/姥姥|外婆/.test(text)) add("grandma");
+      if (/姥爷|外公/.test(text)) add("grandpa");
+      if (/angela|安安|李馨逸|大女儿/i.test(text)) add("daughter1");
+      if (/alisa|玥|月月|玥玥|李馨玥|二女儿/i.test(text)) add("daughter2");
+      if (/aron|康康|李兴睿|小儿子/i.test(text)) add("son");
+      if (!ids.length) add(detectPersonId(text, fallbackId));
+      return ids.filter(id => id && id !== "all");
     }
 
     function detectPersonMention(text) {
@@ -2925,14 +2961,28 @@
     }
 
     function detectCompanion(text) {
-      if (/陈管家|陈先生|陈小峰|陈晓峰|小陈|管家/.test(text)) return "driver";
-      if (/阿磊|司机/.test(text)) return "driverLei";
-      if (/kk|KK|老师|家庭教师/i.test(text)) return "kk";
       if (/服务员\s*A|服务员A|菲律宾佣人\s*A|菲律宾佣人A|佣人\s*A|佣人A|阿姨\s*A|阿姨A|helper\s*a|helperA|A陪|a陪/i.test(text)) return "helperA";
       if (/服务员\s*B|服务员B|菲律宾佣人\s*B|菲律宾佣人B|佣人\s*B|佣人B|阿姨\s*B|阿姨B|helper\s*b|helperB|B陪|b陪/i.test(text)) return "helperB";
       if (/服务员\s*C|服务员C|菲律宾佣人\s*C|菲律宾佣人C|佣人\s*C|佣人C|阿姨\s*C|阿姨C|helper\s*c|helperC|C陪|c陪/i.test(text)) return "helperC";
+      if (/kk|KK|老师|家庭教师/i.test(text)) return "kk";
+      if (/陈管家|陈先生|陈小峰|陈晓峰|小陈|管家/.test(text)) return "driver";
+      if (/阿磊|司机/.test(text)) return "driverLei";
       if (/不陪|不用陪|不需要陪/i.test(text)) return "none";
       return "helperA";
+    }
+
+    function detectCompanions(text) {
+      const ids = [];
+      const add = id => {
+        if (id && id !== "none" && !ids.includes(id)) ids.push(id);
+      };
+      if (/服务员\s*A|服务员A|菲律宾佣人\s*A|菲律宾佣人A|佣人\s*A|佣人A|阿姨\s*A|阿姨A|helper\s*a|helperA|A陪|a陪/i.test(text)) add("helperA");
+      if (/服务员\s*B|服务员B|菲律宾佣人\s*B|菲律宾佣人B|佣人\s*B|佣人B|阿姨\s*B|阿姨B|helper\s*b|helperB|B陪|b陪/i.test(text)) add("helperB");
+      if (/服务员\s*C|服务员C|菲律宾佣人\s*C|菲律宾佣人C|佣人\s*C|佣人C|阿姨\s*C|阿姨C|helper\s*c|helperC|C陪|c陪/i.test(text)) add("helperC");
+      if (/kk|KK|老师|家庭教师/i.test(text)) add("kk");
+      if (/执行人.*陈管家|陈管家.*陪|陈先生.*陪|小陈.*陪/.test(text)) add("driver");
+      if (/阿磊.*陪|司机.*陪/.test(text)) add("driverLei");
+      return ids;
     }
 
     function detectDriver(text) {
@@ -2949,6 +2999,28 @@
       if (/kk|KK|家庭教师|老师/i.test(text)) return "kk";
       if (/陈管家|陈先生|陈小峰|陈晓峰|小陈|管家/.test(text)) return "driver";
       return arguments.length > 1 ? arguments[1] : detectPersonId(text, "driver");
+    }
+
+    function detectAssignablePeople(text) {
+      const ids = [];
+      const add = id => {
+        if (id && id !== "all" && !ids.includes(id)) ids.push(id);
+      };
+      if (/服务员\s*A|服务员A|菲律宾佣人\s*A|菲律宾佣人A|佣人\s*A|佣人A|阿姨\s*A|阿姨A|helper\s*a|helperA/i.test(text)) add("helperA");
+      if (/服务员\s*B|服务员B|菲律宾佣人\s*B|菲律宾佣人B|佣人\s*B|佣人B|阿姨\s*B|阿姨B|helper\s*b|helperB/i.test(text)) add("helperB");
+      if (/服务员\s*C|服务员C|菲律宾佣人\s*C|菲律宾佣人C|佣人\s*C|佣人C|阿姨\s*C|阿姨C|helper\s*c|helperC/i.test(text)) add("helperC");
+      if (/阿磊|司机/.test(text)) add("driverLei");
+      if (/齐厨师|厨师/.test(text)) add("chef");
+      if (/kk|KK|家庭教师|老师/i.test(text)) add("kk");
+      if (/陈管家|陈先生|陈小峰|陈晓峰|小陈|管家/.test(text)) add("driver");
+      if (/妈妈|张老师|张辉/.test(text)) add("mom");
+      if (/爸爸/.test(text)) add("dad");
+      if (/姥姥|外婆/.test(text)) add("grandma");
+      if (/姥爷|外公/.test(text)) add("grandpa");
+      if (/angela|安安|李馨逸|大女儿/i.test(text)) add("daughter1");
+      if (/alisa|玥|月月|玥玥|李馨玥|二女儿/i.test(text)) add("daughter2");
+      if (/aron|康康|李兴睿|小儿子/i.test(text)) add("son");
+      return ids;
     }
 
     function detectExplicitAssignee(text) {
@@ -2987,6 +3059,8 @@
     }
 
     function extractActivityTitle(text) {
+      if (/画展|看展|展览/.test(text)) return "看画展";
+      if (/音乐会|演出/.test(text)) return "音乐会";
       if (/音乐课/.test(text)) return "音乐课";
       if (/兴趣班/.test(text)) return "兴趣班";
       if (/钢琴/.test(text)) return "钢琴课";
@@ -3391,17 +3465,37 @@
         }
       }
       if (action === "assign") {
-        const text = window.prompt("分配给谁？可以写：服务员A、服务员B、服务员C、阿磊、齐厨师、KK、妈妈、爸爸、Angela、Alisa、Aron");
+        const text = window.prompt("分配给谁？可多选，例如：服务员A 服务员B 陈管家 Angela");
         if (text && text.trim()) {
-          const nextAssignee = detectAssignablePerson(text.trim());
-          task.assignee = nextAssignee;
-          task.relationLabel = `${memberById(nextAssignee).name}执行`;
+          const nextAssignees = detectAssignablePeople(text.trim());
+          if (!nextAssignees.length) return;
+          const timeText = window.prompt("新任务时间？例如 15:00。留空则使用原时间。", task.time || "09:00");
+          const nextTime = timeText && extractTime(timeText.trim())
+            ? extractTime(timeText.trim())
+            : timeText && /^\d{1,2}:\d{2}$/.test(timeText.trim())
+              ? timeText.trim().padStart(5, "0")
+              : task.time;
+          const groupId = nextAssignees.length > 1 ? uid() : task.groupId;
+          const groupTitle = nextAssignees.length > 1 ? `重新分配：${task.title}` : task.groupTitle;
+          nextAssignees.forEach(nextAssignee => {
+            createTask({
+              title: task.title,
+              assignee: nextAssignee,
+              date: task.date || state.selectedDate,
+              location: task.location || "none",
+              time: nextTime,
+              followUp: task.followUp || "none",
+              groupId,
+              groupTitle,
+              relationLabel: `${memberById(nextAssignee).name}执行`,
+              prep: task.prep || suggestPrep(task.title, task.location || "none")
+            });
+          });
           state.notices.unshift({
             id: uid(),
-            text: `陈管家把「${task.title}」分配给 ${memberById(nextAssignee).name}。`,
+            text: `陈管家新增分配「${task.title}」给 ${nextAssignees.map(id => memberById(id).name).join("、")}，时间 ${nextTime}。`,
             time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
           });
-          notifyAssignee(nextAssignee, task.title);
         }
       }
       if (action === "delete") {
