@@ -161,6 +161,12 @@
       font-weight: 820;
     }
 
+    .view-switch {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
     .panel-actions {
       display: flex;
       flex-wrap: wrap;
@@ -1439,6 +1445,10 @@
         <section class="panel">
           <div class="panel-head">
             <h2 id="taskPanelTitle">今天任务</h2>
+            <div class="view-switch" id="viewSwitch">
+              <button class="chip active" type="button" data-view="list">列表</button>
+              <button class="chip" type="button" data-view="visual">可视图</button>
+            </div>
           </div>
           <div class="task-toolbar" id="filters">
             <button class="chip active" type="button" data-range="day">当天</button>
@@ -1446,8 +1456,6 @@
             <button class="chip active" type="button" data-filter="all">全部</button>
             <button class="chip" type="button" data-filter="todo">未完成</button>
             <button class="chip" type="button" data-filter="done">已完成</button>
-            <button class="chip active" type="button" data-view="list">列表</button>
-            <button class="chip" type="button" data-view="visual">可视图</button>
           </div>
           <div class="tasks" id="taskList"></div>
         </section>
@@ -3185,11 +3193,17 @@
     });
 
     document.getElementById("filters").addEventListener("click", event => {
-      const button = event.target.closest("button[data-filter], button[data-view], button[data-range]");
+      const button = event.target.closest("button[data-filter], button[data-range]");
       if (!button) return;
       if (button.dataset.range) state.rangeMode = button.dataset.range;
       if (button.dataset.filter) state.filter = button.dataset.filter;
-      if (button.dataset.view) state.viewMode = button.dataset.view;
+      render();
+    });
+
+    document.getElementById("viewSwitch").addEventListener("click", event => {
+      const button = event.target.closest("button[data-view]");
+      if (!button) return;
+      state.viewMode = button.dataset.view;
       render();
     });
 
