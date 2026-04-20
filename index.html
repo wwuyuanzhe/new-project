@@ -4187,10 +4187,12 @@
       const sheet = document.getElementById("overviewSheet");
       const content = document.getElementById("overviewSheetContent");
       const actions = document.getElementById("overviewSheetActions");
+      const closeButton = document.getElementById("closeOverviewSheet");
       document.getElementById("overviewSheetTitle").textContent = title;
       content.innerHTML = "";
       actions.hidden = true;
       actions.innerHTML = "";
+      closeButton.hidden = false;
       if (!tasks.length) {
         content.innerHTML = `<div class="empty">这里暂时没有事项。</div>`;
       } else if (options.groupByPerson) {
@@ -4312,8 +4314,10 @@
       const sheet = document.getElementById("overviewSheet");
       const content = document.getElementById("overviewSheetContent");
       const actions = document.getElementById("overviewSheetActions");
+      const closeButton = document.getElementById("closeOverviewSheet");
       document.getElementById("overviewSheetTitle").textContent = "给妈妈的反馈";
       content.innerHTML = "";
+      closeButton.hidden = true;
       actions.hidden = false;
       actions.innerHTML = `
         <button class="action" type="button" id="sheetMarkFeedbackReadBtn">标记反馈已读</button>
@@ -4667,11 +4671,13 @@
       document.getElementById("closeOverviewSheet").addEventListener("click", () => {
         document.getElementById("overviewSheet").hidden = true;
         document.getElementById("overviewSheetActions").hidden = true;
+        document.getElementById("closeOverviewSheet").hidden = false;
       });
 
       document.getElementById("overviewSheetBackdrop").addEventListener("click", () => {
         document.getElementById("overviewSheet").hidden = true;
         document.getElementById("overviewSheetActions").hidden = true;
+        document.getElementById("closeOverviewSheet").hidden = false;
       });
 
     document.getElementById("closeReassignSheet").addEventListener("click", closeReassignSheet);
