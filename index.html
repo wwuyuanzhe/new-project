@@ -2500,6 +2500,96 @@
       notifyAssignee(assignee, title);
     }
 
+    async function parseNaturalRequestWithGPT(text, requesterId) {
+      if (window.location.protocol === "file:") return false;
+      try {
+        const response = await fetch("/api/parse-task", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text,
+            requesterId,
+            selectedDate: state.selectedDate,
+            today: todayISO(),
+            members: members.filter(member => member.id !== "all").map(member => ({
+              id: member.id,
+              name: member.name,
+              role: member.role
+            })),
+            locations: locations.flatMap(section => section.rooms.map(room => ({
+              id: room.id,
+              name: room.name,
+              group: section.group
+            })))
+          })
+        });
+        if (!response.ok) return false;
+        const plan = await response.json();
+        return applyGptTaskPlan(plan, text, requesterId);
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function validMemberIds(ids) {
+      return (Array.isArray(ids) ? ids : [])
+        .filter(id => id && id !== "all" && members.some(member => member.id === id));
+    }
+
+    function applyGptTaskPlan(plan, originalText, requesterId) {
+      const actions = Array.isArray(plan && plan.actions) ? plan.actions : [];
+      if (!actions.length) return false;
+      let count = 0;
+      actions.forEach(action => {
+        const kind = action.kind || "task";
+        const title = (action.title || originalText).trim();
+        const date = action.date || state.selectedDate;
+        const time = action.time || "09:00";
+        const location = action.location || "none";
+        const assigneeIds = validMemberIds(action.assigneeIds);
+        const personIds = validMemberIds(action.personIds);
+        if (kind === "feedback") {
+          addFeedback(requesterId, action.note || title);
+          count += 1;
+          return;
+        }
+        if (kind === "linked_schedule" && personIds.length) {
+          addLinkedScheduleBatch({
+            personIds,
+            title,
+            time,
+            location,
+            rideMode: action.rideMode || "no",
+            companionIds: assigneeIds.length ? assigneeIds : ["none"],
+            driverId: action.driverId || "driver",
+            date
+          });
+          count += 1;
+          return;
+        }
+        const directAssignees = assigneeIds.length ? assigneeIds : ["driver"];
+        directAssignees.forEach(assignee => {
+          createTaskForAssignee({
+            title,
+            assignee,
+            date,
+            location,
+            time,
+            prep: action.prep || suggestPrep(title, location),
+            followUp: personIds.length ? personIds.join(",") : "none"
+          });
+          count += 1;
+        });
+      });
+      if (!count) return false;
+      state.notices.unshift({
+        id: uid(),
+        text: `GPT小助手已把「${originalText}」整理成 ${count} 个安排。`,
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      });
+      return true;
+    }
+
     function parseNaturalRequest(text, requesterId) {
       const requester = memberById(requesterId);
       const clean = text.replace(/\s+/g, " ").trim();
@@ -3323,7 +3413,7 @@
       const progress = document.getElementById("progressList");
       progress.innerHTML = "";
       members
-        .filter(member => member.id !== "all" && member.id !== "mom")
+        .filter(member => member.id !== "all")
         .slice()
         .sort((a, b) => personSortIndex(a.id) - personSortIndex(b.id))
         .forEach(member => {
@@ -3692,11 +3782,12 @@
       });
     });
 
-    document.getElementById("naturalForm").addEventListener("submit", event => {
+    document.getElementById("naturalForm").addEventListener("submit", async event => {
       event.preventDefault();
       const text = document.getElementById("naturalText").value.trim();
       if (!text) return;
-      parseNaturalRequest(text, currentSpeakerId());
+      const usedGPT = await parseNaturalRequestWithGPT(text, currentSpeakerId());
+      if (!usedGPT) parseNaturalRequest(text, currentSpeakerId());
       document.getElementById("naturalText").value = "";
       save();
       render();
