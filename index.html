@@ -163,8 +163,28 @@
 
     .view-switch {
       display: flex;
-      gap: 8px;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 8px;
+      background: rgba(18, 24, 31, 0.08);
       flex-shrink: 0;
+    }
+
+    .view-option {
+      min-height: 34px;
+      border-radius: 8px;
+      padding: 0 11px;
+      color: var(--muted);
+      background: transparent;
+      font-size: 13px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .view-option.active {
+      color: #fff;
+      background: #111827;
+      box-shadow: var(--glow);
     }
 
     .panel-actions {
@@ -1110,6 +1130,17 @@
         font-size: 17px;
       }
 
+      .view-switch {
+        gap: 3px;
+        padding: 3px;
+      }
+
+      .view-option {
+        min-height: 32px;
+        padding: 0 9px;
+        font-size: 12px;
+      }
+
       .member-list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         max-height: none;
@@ -1446,8 +1477,8 @@
           <div class="panel-head">
             <h2 id="taskPanelTitle">今天任务</h2>
             <div class="view-switch" id="viewSwitch">
-              <button class="chip active" type="button" data-view="list">列表</button>
-              <button class="chip" type="button" data-view="visual">可视图</button>
+              <button class="view-option active" type="button" data-view="list">列表</button>
+              <button class="view-option" type="button" data-view="visual">可视图</button>
             </div>
           </div>
           <div class="task-toolbar" id="filters">
@@ -2565,23 +2596,23 @@
       }
 
       const linkedTasks = [];
-      if (rideMode === "yes" || rideMode === "dropoff") {
+      if (rideMode === "yes") {
+        linkedTasks.push({
+          title: `接送${person.name}${title}`,
+          time: minutesToTime(clampDayMinutes(start - 30)),
+          prep: "提前确认时间、路线、车钥匙和随身物品，接送完成后有变化再反馈。"
+        });
+      } else if (rideMode === "dropoff") {
         linkedTasks.push({
           title: `送${person.name}去${title}`,
           time: minutesToTime(clampDayMinutes(start - 30)),
-          prep: "确认出发时间、路线、车钥匙、随身物品和目的地，提前提醒本人准备下楼。"
+          prep: "提前确认时间、路线、车钥匙和随身物品，送到后有变化再反馈。"
         });
+      } else if (rideMode === "pickup") {
         linkedTasks.push({
-          title: `确认${person.name}已到达${title}`,
+          title: `接${person.name}${title}结束`,
           time,
-          prep: "到达后确认本人安全进入地点，并把情况同步给妈妈。"
-        });
-      }
-      if (rideMode === "yes" || rideMode === "pickup") {
-        linkedTasks.push({
-          title: `接${person.name}从${title}回来`,
-          time: minutesToTime(clampDayMinutes(start + 60)),
-          prep: "提前确认结束时间、停车位置和返程路线，如时间变化及时同步妈妈。"
+          prep: "提前确认结束时间、停车位置和返程路线，有变化及时反馈。"
         });
       }
 
@@ -2598,7 +2629,7 @@
       const companionTasks = [];
       if (companionId !== "none" && personId !== "mom" && !personIsDriver) {
         companionTasks.push({
-          title: `执行/跟进${person.name}：${title}`,
+          title: `陪同/跟进${person.name}${title}`,
           assignee: companionId,
           date,
           location,
@@ -2606,18 +2637,7 @@
           groupId,
           groupTitle,
           relationLabel: `${memberById(companionId).name}执行`,
-          prep: `确认${person.name}的时间、地点、随身物品和联系手机，需要接送时提前与${driver.name}确认。`
-        });
-        companionTasks.push({
-          title: `完成${person.name}的${title}并反馈`,
-          assignee: companionId,
-          date,
-          location,
-          time,
-          groupId,
-          groupTitle,
-          relationLabel: `${memberById(companionId).name}反馈`,
-          prep: "确认孩子安全进入活动地点，结束后把情况反馈给妈妈或管家陈先生。"
+          prep: `确认时间、地点和需要带的物品；有变化再反馈给妈妈或管家陈先生。`
         });
       }
       companionTasks.forEach(task => createTask(task));
@@ -2625,7 +2645,7 @@
       if (!suppressNotice) {
         state.notices.unshift({
           id: uid(),
-          text: `已联动生成${person.name}的「${title}」、${linkedTasks.length} 个${driver.name}接送/用车事项${companionTasks.length ? `，以及 ${companionTasks.length} 个陪同事项` : ""}。`,
+          text: `已联动生成${person.name}的「${title}」及相关执行事项。`,
           time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
         });
       }
@@ -3024,6 +3044,9 @@
         if (button.dataset.view) {
           button.classList.toggle("active", button.dataset.view === state.viewMode);
         }
+      });
+      document.querySelectorAll(".view-option").forEach(button => {
+        button.classList.toggle("active", button.dataset.view === state.viewMode);
       });
       document.querySelectorAll("[data-lang]").forEach(button => {
         button.classList.toggle("active", button.dataset.lang === appLanguage);
