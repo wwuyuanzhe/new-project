@@ -1,0 +1,2893 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>我们家的小助手</title>
+  <style>
+    :root {
+      --ink: #101418;
+      --muted: #6f7782;
+      --line: rgba(18, 24, 31, 0.1);
+      --soft: rgba(247, 248, 250, 0.78);
+      --paper: rgba(255, 255, 255, 0.82);
+      --green: #007aff;
+      --green-soft: rgba(0, 122, 255, 0.1);
+      --gold: #a15c00;
+      --gold-soft: rgba(255, 184, 77, 0.18);
+      --red: #d92d20;
+      --red-soft: rgba(255, 59, 48, 0.12);
+      --blue: #007aff;
+      --blue-soft: rgba(0, 122, 255, 0.1);
+      --shadow: 0 22px 60px rgba(22, 28, 35, 0.12);
+      --small-shadow: 0 8px 24px rgba(22, 28, 35, 0.08);
+      --glow: 0 1px 0 rgba(255, 255, 255, 0.72) inset;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(242, 246, 251, 0.92) 43%, rgba(236, 242, 248, 0.96) 100%),
+        linear-gradient(180deg, #fbfbfd 0%, #eef2f7 100%);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+      overflow-x: hidden;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 0 22px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.08;
+      letter-spacing: 0;
+      font-weight: 850;
+    }
+
+    .brand p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 520;
+    }
+
+    .date-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      border-radius: 8px;
+      padding: 12px 14px;
+      min-height: 48px;
+      box-shadow: var(--small-shadow), var(--glow);
+      backdrop-filter: blur(22px) saturate(1.35);
+      white-space: nowrap;
+    }
+
+    .date-button {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: rgba(247, 248, 250, 0.92);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-weight: 900;
+      box-shadow: var(--glow);
+    }
+
+    .date-input {
+      min-height: 34px;
+      width: 142px;
+      padding: 5px 8px;
+      border-radius: 8px;
+    }
+
+    .role-note {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      margin-top: 10px;
+      padding: 0 11px;
+      border-radius: 8px;
+      color: #075aa7;
+      background: var(--green-soft);
+      border: 1px solid rgba(0, 122, 255, 0.14);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr) 340px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      min-width: 0;
+      background: var(--paper);
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      border-radius: 8px;
+      box-shadow: var(--shadow), var(--glow);
+      overflow: hidden;
+      backdrop-filter: blur(24px) saturate(1.35);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(250, 251, 253, 0.56));
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 820;
+    }
+
+    .panel-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(245, 247, 250, 0.62);
+    }
+
+    .mode-tab {
+      min-height: 38px;
+      border-radius: 8px;
+      padding: 0 12px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      color: var(--ink);
+      font-weight: 800;
+      box-shadow: var(--glow);
+    }
+
+    .mode-tab.active {
+      background: linear-gradient(180deg, #2f9bff, #007aff);
+      color: #fff;
+      border-color: rgba(0, 122, 255, 0.48);
+      box-shadow: 0 10px 22px rgba(0, 122, 255, 0.24), var(--glow);
+    }
+
+    .action-pane[hidden] {
+      display: none;
+    }
+
+    .member-list {
+      display: grid;
+      gap: 9px;
+      padding: 12px;
+      max-height: calc(100vh - 160px);
+      overflow: auto;
+    }
+
+    .member-button {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 38px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 58px;
+      padding: 10px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.38);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      text-align: left;
+      transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .member-button.manager {
+      background: rgba(255, 248, 235, 0.72);
+      border: 1px solid rgba(161, 92, 0, 0.16);
+    }
+
+    .member-button.active,
+    .member-button:hover {
+      background: rgba(255, 255, 255, 0.84);
+      border-color: rgba(0, 122, 255, 0.18);
+      box-shadow: 0 10px 22px rgba(22, 28, 35, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 800;
+      background: var(--green);
+      box-shadow: 0 8px 18px rgba(22, 28, 35, 0.14), var(--glow);
+    }
+
+    .member-name {
+      font-weight: 700;
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .member-button > span:not(.avatar):not(.count) {
+      min-width: 0;
+    }
+
+    .member-role {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+      overflow-wrap: anywhere;
+    }
+
+    .count {
+      min-width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      background: rgba(247, 248, 250, 0.86);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .main {
+      display: grid;
+      gap: 20px;
+    }
+
+    .composer {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(170px, 1fr) 150px 170px 120px auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .quick-form {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .schedule-form {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+
+    .schedule-form .field:nth-child(2) {
+      grid-column: span 1;
+    }
+
+    .schedule-form .field:nth-child(3) {
+      grid-column: span 2;
+    }
+
+    .schedule-form .primary {
+      grid-column: span 4;
+    }
+
+    .quick-form textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    .helper-text {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      padding: 0 16px 16px;
+      font-weight: 520;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid rgba(18, 24, 31, 0.1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--ink);
+      padding: 10px 12px;
+      outline: none;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.76) inset;
+      transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      background: #fff;
+      border-color: rgba(0, 122, 255, 0.7);
+      box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.14);
+    }
+
+    .primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 46px;
+      border-radius: 8px;
+      padding: 0 16px;
+      color: #fff;
+      background: linear-gradient(180deg, #2f9bff, #007aff);
+      font-weight: 800;
+      white-space: nowrap;
+      box-shadow: 0 12px 24px rgba(0, 122, 255, 0.24), var(--glow);
+      transition: transform 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 30px rgba(0, 122, 255, 0.3), var(--glow);
+    }
+
+    .task-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(245, 247, 250, 0.62);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      border-radius: 8px;
+      padding: 0 12px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      color: var(--ink);
+      font-weight: 700;
+      box-shadow: var(--glow);
+    }
+
+    .chip.active {
+      background: #111827;
+      border-color: #111827;
+      color: #fff;
+    }
+
+    .tasks {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+      min-height: 220px;
+    }
+
+    .routine-list {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .routine-editor {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: minmax(160px, 1fr) 150px 170px minmax(160px, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+      border-bottom: 1px solid var(--line);
+      background: rgba(245, 247, 250, 0.62);
+    }
+
+    .routine-button {
+      min-height: 76px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(18, 24, 31, 0.1);
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      text-align: left;
+      display: grid;
+      gap: 6px;
+      box-shadow: var(--glow);
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    }
+
+    .routine-button:hover,
+    .routine-button.active {
+      transform: translateY(-1px);
+      border-color: rgba(0, 122, 255, 0.34);
+      background: var(--green-soft);
+      box-shadow: var(--small-shadow), var(--glow);
+    }
+
+    .routine-title {
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .routine-meta {
+      color: var(--muted);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .routine-card {
+      display: grid;
+      gap: 8px;
+    }
+
+    .routine-card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .prep-line {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      background: rgba(247, 248, 250, 0.78);
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      border-radius: 8px;
+      padding: 9px 10px;
+    }
+
+    .visual-board {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+    }
+
+    .visual-card {
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(18, 24, 31, 0.09);
+      border-radius: 8px;
+      padding: 13px;
+      display: grid;
+      gap: 10px;
+      box-shadow: var(--small-shadow), var(--glow);
+    }
+
+    .visual-card h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .visual-meter {
+      height: 10px;
+      border-radius: 8px;
+      background: rgba(18, 24, 31, 0.08);
+      overflow: hidden;
+    }
+
+    .visual-meter span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00c7be, #007aff);
+    }
+
+    .visual-task {
+      display: grid;
+      gap: 4px;
+      padding: 9px;
+      border-radius: 8px;
+      background: rgba(247, 248, 250, 0.8);
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      font-size: 13px;
+    }
+
+    .visual-task strong {
+      overflow-wrap: anywhere;
+    }
+
+    .task {
+      position: relative;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(18, 24, 31, 0.09);
+      border-left: 4px solid var(--green);
+      border-radius: 8px;
+      padding: 15px;
+      display: grid;
+      gap: 12px;
+      box-shadow: 0 10px 28px rgba(22, 28, 35, 0.08), var(--glow);
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    }
+
+    .task:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 36px rgba(22, 28, 35, 0.12), var(--glow);
+    }
+
+    .manager-mark {
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 800;
+      margin-top: 4px;
+    }
+
+    .task.urgent {
+      border-left-color: var(--red);
+      background: linear-gradient(90deg, var(--red-soft), rgba(255, 255, 255, 0.88) 42%);
+    }
+
+    .task.issue {
+      border-left-color: var(--gold);
+      background: linear-gradient(90deg, var(--gold-soft), rgba(255, 255, 255, 0.88) 42%);
+    }
+
+    .task.done {
+      border-left-color: #34c759;
+      background: linear-gradient(90deg, rgba(52, 199, 89, 0.12), rgba(255, 255, 255, 0.86) 42%);
+      opacity: 1;
+    }
+
+    .task.done .task-title {
+      color: #4f6258;
+      text-decoration: line-through;
+      text-decoration-thickness: 2px;
+      text-decoration-color: rgba(63, 143, 99, 0.38);
+    }
+
+    .task-top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .task-title {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.35;
+      font-weight: 820;
+      overflow-wrap: anywhere;
+    }
+
+    .task-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      border-radius: 8px;
+      padding: 0 9px;
+      background: rgba(247, 248, 250, 0.84);
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      font-weight: 700;
+      white-space: nowrap;
+      box-shadow: var(--glow);
+    }
+
+    .badge.urgent {
+      color: var(--red);
+      background: var(--red-soft);
+      border-color: #f7b4ad;
+    }
+
+    .badge.issue {
+      color: var(--gold);
+      background: var(--gold-soft);
+      border-color: #efce83;
+    }
+
+    .badge.done {
+      color: #246845;
+      background: #dff2e7;
+      border-color: #afd8c1;
+    }
+
+    .task-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      border-radius: 8px;
+      padding: 0 11px;
+      background: rgba(247, 248, 250, 0.84);
+      border: 1px solid rgba(18, 24, 31, 0.09);
+      color: var(--ink);
+      font-weight: 800;
+      box-shadow: var(--glow);
+      transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+    }
+
+    .action:hover {
+      background: #fff;
+      border-color: rgba(0, 122, 255, 0.34);
+      transform: translateY(-1px);
+    }
+
+    .action.warn {
+      background: var(--gold-soft);
+      border-color: #efce83;
+      color: var(--gold);
+    }
+
+    .action.danger {
+      background: var(--red-soft);
+      border-color: #f7b4ad;
+      color: var(--red);
+    }
+
+    .status {
+      min-width: 96px;
+      text-align: center;
+    }
+
+    .notice-list {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .mom-dashboard {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .dashboard-card {
+      min-width: 0;
+      min-height: 92px;
+      padding: 13px;
+      border-radius: 8px;
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      background: rgba(247, 248, 250, 0.76);
+      display: grid;
+      gap: 7px;
+      box-shadow: var(--glow);
+    }
+
+    .dashboard-card.alert {
+      background: rgba(255, 59, 48, 0.1);
+      border-color: rgba(217, 45, 32, 0.16);
+    }
+
+    .dashboard-card.feedback-alert {
+      background: rgba(255, 248, 235, 0.86);
+      border-color: rgba(161, 92, 0, 0.2);
+    }
+
+    .dashboard-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .dashboard-number {
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 880;
+    }
+
+    .dashboard-note {
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .red-dot {
+      display: inline-grid;
+      place-items: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 7px;
+      border-radius: 999px;
+      background: var(--red);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: 0 8px 18px rgba(217, 45, 32, 0.25);
+    }
+
+    .dashboard-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .dashboard-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 11px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      font-size: 13px;
+      box-shadow: var(--glow);
+    }
+
+    .dashboard-row strong {
+      overflow-wrap: anywhere;
+    }
+
+    .dashboard-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .notice {
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(235, 245, 255, 0.84);
+      border: 1px solid rgba(0, 122, 255, 0.16);
+      color: #075aa7;
+      font-size: 14px;
+      line-height: 1.45;
+      box-shadow: var(--glow);
+    }
+
+    .feedback {
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(255, 248, 235, 0.82);
+      border: 1px solid rgba(161, 92, 0, 0.18);
+      color: #5d3b00;
+      font-size: 14px;
+      line-height: 1.45;
+      box-shadow: var(--glow);
+    }
+
+    .summary {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat {
+      background: rgba(247, 248, 250, 0.78);
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: var(--glow);
+    }
+
+    .stat b {
+      display: block;
+      font-size: 26px;
+      font-weight: 850;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .person-progress {
+      display: grid;
+      gap: 9px;
+    }
+
+    .progress-row {
+      display: grid;
+      grid-template-columns: 74px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .bar {
+      height: 9px;
+      background: rgba(18, 24, 31, 0.08);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00c7be, #007aff);
+      width: 0%;
+    }
+
+    .empty {
+      display: grid;
+      place-items: center;
+      min-height: 150px;
+      color: var(--muted);
+      border: 1px dashed rgba(18, 24, 31, 0.16);
+      border-radius: 8px;
+      background: rgba(247, 248, 250, 0.62);
+      text-align: center;
+      padding: 18px;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 210px minmax(0, 1fr);
+      }
+
+      .right {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        background: linear-gradient(180deg, #fbfbfd 0%, #eef2f7 100%);
+      }
+
+      .app {
+        padding: 12px;
+      }
+
+      .topbar {
+        display: grid;
+        gap: 12px;
+        padding: 8px 0 14px;
+      }
+
+      .brand h1 {
+        font-size: 26px;
+        line-height: 1.2;
+      }
+
+      .brand p {
+        font-size: 14px;
+      }
+
+      .date-pill {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr) 36px;
+        justify-content: stretch;
+        min-height: 44px;
+        padding: 10px 12px;
+        white-space: normal;
+      }
+
+      #prevDateBtn {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      #todayText {
+        grid-column: 2;
+        grid-row: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: center;
+      }
+
+      #nextDateBtn {
+        grid-column: 3;
+        grid-row: 1;
+      }
+
+      #currentDateInput {
+        grid-column: 1 / -1;
+        grid-row: 2;
+      }
+
+      #langZhBtn {
+        grid-column: 1 / 3;
+        grid-row: 3;
+      }
+
+      #langEnBtn {
+        grid-column: 3;
+        grid-row: 3;
+      }
+
+      .date-pill .chip {
+        width: 100%;
+      }
+
+      .date-input {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .layout {
+        display: flex;
+        flex-direction: column;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .layout > * {
+        min-width: 0;
+      }
+
+      .right {
+        order: -1;
+      }
+
+      .panel {
+        box-shadow: 0 10px 26px rgba(22, 28, 35, 0.1), var(--glow);
+      }
+
+      .panel-head {
+        padding: 13px;
+      }
+
+      .panel-head h2 {
+        font-size: 17px;
+      }
+
+      .member-list {
+        grid-template-columns: 1fr;
+        max-height: none;
+        padding: 10px;
+        gap: 8px;
+        overflow: hidden;
+      }
+
+      .member-button {
+        grid-template-columns: 34px minmax(0, 1fr);
+        min-height: 64px;
+        padding: 9px;
+        background: rgba(255, 255, 255, 0.62);
+      }
+
+      .member-button .count {
+        display: none;
+      }
+
+      .composer {
+        grid-template-columns: 1fr;
+        padding: 13px;
+      }
+
+      .quick-form {
+        grid-template-columns: 1fr;
+        padding: 13px;
+      }
+
+      .schedule-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 13px;
+      }
+
+      .schedule-form .field:nth-child(1),
+      .schedule-form .field:nth-child(2),
+      .schedule-form .field:nth-child(3),
+      .schedule-form .field:nth-child(5),
+      .schedule-form .field:nth-child(8),
+      .schedule-form .primary {
+        grid-column: 1 / -1;
+      }
+
+      input,
+      select,
+      textarea,
+      .primary {
+        min-height: 48px;
+      }
+
+      label {
+        font-size: 12px;
+      }
+
+      .task-toolbar {
+        padding: 10px;
+        gap: 8px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+      }
+
+      .mode-tabs {
+        padding: 10px;
+        gap: 8px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+      }
+
+      .task-toolbar::-webkit-scrollbar,
+      .mode-tabs::-webkit-scrollbar {
+        display: none;
+      }
+
+      .mode-tab {
+        min-width: max-content;
+      }
+
+      .chip {
+        min-width: max-content;
+        min-height: 38px;
+      }
+
+      .tasks {
+        padding: 12px;
+        gap: 10px;
+      }
+
+      .routine-list {
+        grid-template-columns: 1fr;
+        padding: 10px;
+      }
+
+      .routine-editor {
+        grid-template-columns: 1fr;
+        padding: 10px;
+      }
+
+      .routine-button {
+        min-height: 68px;
+      }
+
+      .task {
+        padding: 13px;
+      }
+
+      .task-top {
+        grid-template-columns: 1fr;
+      }
+
+      .status {
+        min-width: 0;
+        width: max-content;
+      }
+
+      .task-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .action {
+        min-height: 40px;
+      }
+
+      .dashboard-grid {
+        gap: 10px;
+      }
+
+      .dashboard-row {
+        grid-template-columns: 1fr;
+        gap: 7px;
+      }
+
+      .dashboard-row .badge {
+        width: max-content;
+        max-width: 100%;
+        white-space: normal;
+      }
+
+      .dashboard-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .progress-row {
+        grid-template-columns: 68px 1fr 42px;
+      }
+
+      .summary,
+      .notice-list {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>我们家的小助手</h1>
+        <p>家里今天要做的事，一眼就看明白。</p>
+      </div>
+      <div class="date-pill" aria-label="今天日期">
+        <button class="date-button" type="button" id="prevDateBtn">‹</button>
+        <strong id="todayText"></strong>
+        <input class="date-input" id="currentDateInput" type="date" />
+        <button class="date-button" type="button" id="nextDateBtn">›</button>
+        <button class="chip active" type="button" id="langZhBtn" data-lang="zh">中文</button>
+        <button class="chip" type="button" id="langEnBtn" data-lang="en">EN</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel">
+        <div class="panel-head">
+          <h2>家里的人</h2>
+        </div>
+        <div class="member-list" id="memberList"></div>
+      </aside>
+
+      <main class="main">
+        <section class="panel" id="quickPanel">
+          <div class="panel-head">
+            <h2 id="quickPanelTitle">快速处理</h2>
+          </div>
+          <div class="mode-tabs" id="actionTabs">
+            <button class="mode-tab active" type="button" data-action-mode="natural">一句话</button>
+            <button class="mode-tab" type="button" data-action-mode="schedule">日程/事项</button>
+            <button class="mode-tab" type="button" data-action-mode="feedback">给妈妈反馈</button>
+          </div>
+          <div class="action-pane" id="naturalPanel">
+            <form class="quick-form" id="naturalForm">
+              <div class="field">
+                <label for="naturalText">直接说你想要什么</label>
+                <textarea id="naturalText" placeholder="例如：康康每天9点吃早饭下午7点围棋课 / Alisa 本周每天18点学游泳"></textarea>
+              </div>
+              <button class="primary" type="submit">发送给小助手</button>
+            </form>
+            <div class="helper-text">小助手会尽量自动判断应该交给谁，例如吃饭交给齐厨师并通知管家陈先生，用车交给管家陈先生，学习交给 KK。</div>
+          </div>
+          <div class="action-pane" id="linkedSchedulePanel" hidden>
+            <form class="schedule-form" id="linkedScheduleForm">
+              <div class="field">
+                <label for="schedulePerson">谁的日程</label>
+                <select id="schedulePerson"></select>
+              </div>
+              <div class="field">
+                <label for="scheduleDate">日期</label>
+                <input id="scheduleDate" type="date" />
+              </div>
+              <div class="field">
+                <label for="scheduleTitle">活动/会议/课程</label>
+                <input id="scheduleTitle" placeholder="例如：音乐课 / 去公司开会" />
+              </div>
+              <div class="field">
+                <label for="scheduleTime">开始时间</label>
+                <input id="scheduleTime" type="time" value="15:00" />
+              </div>
+              <div class="field">
+                <label for="scheduleLocation">地点</label>
+                <select id="scheduleLocation"></select>
+              </div>
+              <div class="field">
+                <label for="scheduleRide">接送</label>
+                <select id="scheduleRide">
+                  <option value="no">不需要，单独事项</option>
+                  <option value="yes">需要接送</option>
+                  <option value="dropoff">只送去</option>
+                  <option value="pickup">只接回</option>
+              </select>
+            </div>
+              <div class="field">
+                <label for="scheduleDriver">接送人</label>
+                <select id="scheduleDriver">
+                  <option value="driver">管家陈先生</option>
+                  <option value="driverLei">司机阿磊</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="scheduleCompanion">陪同人</label>
+                <select id="scheduleCompanion">
+                  <option value="none">不需要陪同</option>
+                  <option value="helperA">菲律宾佣人 A</option>
+                  <option value="helperB">菲律宾佣人 B</option>
+                  <option value="helperC">菲律宾佣人 C</option>
+                  <option value="kk">家庭教师 KK</option>
+                </select>
+              </div>
+            <button class="primary" type="submit">保存日程/事项</button>
+          </form>
+            <div class="helper-text">如果不选接送、不选陪同，就是单独日程；如果选择接送或陪同，小助手会自动生成本人、接送人和陪同人的事项。</div>
+          </div>
+          <div class="action-pane" id="feedbackPanel" hidden>
+            <form class="quick-form" id="feedbackForm">
+              <div class="field">
+                <label for="feedbackText">只给妈妈看的内容</label>
+                <textarea id="feedbackText" placeholder="例如：今天 Aron 有点咳嗽，想提醒妈妈看一下"></textarea>
+              </div>
+              <button class="primary" type="submit">发给妈妈</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel" id="routinePanel">
+          <div class="panel-head">
+            <h2 id="routineTitle">常用日常</h2>
+            <div class="panel-actions">
+              <button class="action" type="button" id="generateAllBtn">生成全部日常</button>
+            </div>
+          </div>
+          <form class="routine-editor" id="routineForm">
+            <div class="field">
+              <label for="routineName">日常事项</label>
+              <input id="routineName" placeholder="例如：大客厅整理" />
+            </div>
+            <div class="field">
+              <label for="routineTime">开始时间</label>
+              <input id="routineTime" type="time" value="09:00" />
+            </div>
+            <div class="field">
+              <label for="routineLocation">地点</label>
+              <select id="routineLocation"></select>
+            </div>
+            <div class="field">
+              <label for="routinePrep">提前准备</label>
+              <input id="routinePrep" placeholder="自动建议，也可以改" />
+            </div>
+            <button class="primary" type="submit">保存日常</button>
+          </form>
+          <div class="routine-list" id="routineList"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2 id="taskPanelTitle">今天任务</h2>
+          </div>
+          <div class="task-toolbar" id="filters">
+            <button class="chip active" type="button" data-range="day">当天</button>
+            <button class="chip" type="button" data-range="week">本周</button>
+            <button class="chip active" type="button" data-filter="all">全部</button>
+            <button class="chip" type="button" data-filter="todo">未完成</button>
+            <button class="chip" type="button" data-filter="urgent">加急</button>
+            <button class="chip" type="button" data-filter="issue">有问题</button>
+            <button class="chip" type="button" data-filter="done">已完成</button>
+            <button class="chip active" type="button" data-view="list">列表</button>
+            <button class="chip" type="button" data-view="visual">可视图</button>
+          </div>
+          <div class="tasks" id="taskList"></div>
+        </section>
+      </main>
+
+      <aside class="panel right">
+        <div class="panel-head">
+          <h2>妈妈今日重点 <span class="red-dot" id="feedbackUnreadDot" hidden>0</span></h2>
+        </div>
+        <div class="mom-dashboard" id="momDashboard">
+          <div class="dashboard-grid">
+            <div class="dashboard-card feedback-alert">
+              <span class="dashboard-label">未读私密反馈</span>
+              <b class="dashboard-number" id="unreadFeedbackCount">0</b>
+              <span class="dashboard-note" id="latestFeedbackText">暂无新的私密反馈</span>
+            </div>
+            <div class="dashboard-card alert">
+              <span class="dashboard-label">今天异常提醒</span>
+              <b class="dashboard-number" id="todayIssueCount">0</b>
+              <span class="dashboard-note" id="todayIssueText">今天没有异常事项</span>
+            </div>
+            <div class="dashboard-card">
+              <span class="dashboard-label">今天未完成</span>
+              <b class="dashboard-number" id="todayOpenCount">0</b>
+              <span class="dashboard-note" id="todayBusyText">今天暂时没有待办</span>
+            </div>
+            <div class="dashboard-card">
+              <span class="dashboard-label">马上开始</span>
+              <b class="dashboard-number" id="upcomingCount">0</b>
+              <span class="dashboard-note" id="upcomingText">暂无即将开始事项</span>
+            </div>
+          </div>
+          <div class="dashboard-list" id="momFocusList"></div>
+          <div class="dashboard-actions">
+            <button class="action" type="button" id="showFeedbackBtn">查看私密反馈</button>
+            <button class="action" type="button" id="markFeedbackReadBtn">标记反馈已读</button>
+          </div>
+        </div>
+        <div class="panel-head">
+          <h2>妈妈总览</h2>
+        </div>
+        <div class="summary">
+          <div class="stat-grid">
+            <div class="stat">
+              <b id="doneCount">0</b>
+              <span>已完成</span>
+            </div>
+            <div class="stat">
+              <b id="urgentCount">0</b>
+              <span>加急中</span>
+            </div>
+            <div class="stat">
+              <b id="doingCount">0</b>
+              <span>进行中</span>
+            </div>
+            <div class="stat">
+              <b id="issueCount">0</b>
+              <span>有问题</span>
+            </div>
+          </div>
+          <div class="person-progress" id="progressList"></div>
+        </div>
+        <div class="panel-head">
+          <h2>执行人收到的消息</h2>
+        </div>
+        <div class="notice-list" id="noticeList"></div>
+        <div class="panel-head" id="privateFeedbackHead">
+          <h2>妈妈私密反馈</h2>
+        </div>
+        <div class="notice-list" id="privateFeedbackList"></div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const members = [
+      { id: "all", name: "全家总览", role: "妈妈和管家陈先生查看", color: "#2f7d57", initials: "总" },
+      { id: "mom", name: "妈妈", role: "最高负责人", color: "#276749", initials: "妈", manager: true },
+      { id: "dad", name: "爸爸", role: "家庭成员", color: "#315f72", initials: "爸" },
+      { id: "grandpa", name: "姥爷", role: "妈妈的爸爸", color: "#5f6f52", initials: "爷" },
+      { id: "grandma", name: "姥姥", role: "妈妈的妈妈", color: "#7a5c8c", initials: "姥" },
+      { id: "daughter1", name: "Angela", role: "大女儿", color: "#d05b44", initials: "An" },
+      { id: "daughter2", name: "Alisa", role: "二女儿", color: "#b5466b", initials: "Al" },
+      { id: "son", name: "Aron", role: "小儿子", color: "#2d6cdf", initials: "Ar" },
+      { id: "helperA", name: "菲律宾佣人 A", role: "Helper A", color: "#008b8b", initials: "A" },
+      { id: "helperB", name: "菲律宾佣人 B", role: "Helper B", color: "#6b7f20", initials: "B" },
+      { id: "helperC", name: "菲律宾佣人 C", role: "Helper C", color: "#9b5a2e", initials: "C" },
+      { id: "driver", name: "管家陈先生", role: "协助妈妈管理日常工作", color: "#4b5f93", initials: "陈", manager: true },
+      { id: "driverLei", name: "司机阿磊", role: "Driver", color: "#2f6f89", initials: "磊" },
+      { id: "chef", name: "齐厨师", role: "Chef", color: "#9a6a00", initials: "齐" },
+      { id: "kk", name: "家庭教师 KK", role: "Tutor", color: "#6d4aaa", initials: "KK" }
+    ];
+
+    const locations = [
+      {
+        group: "通用",
+        rooms: [
+          { id: "none", name: "不指定地点" }
+        ]
+      },
+      {
+        group: "一层",
+        rooms: [
+          { id: "floor1-kitchen", name: "厨房" },
+          { id: "floor1-dining", name: "餐厅" },
+          { id: "floor1-living", name: "大客厅" },
+          { id: "floor1-study", name: "书房" },
+          { id: "floor1-bathroom", name: "卫生间" },
+          { id: "floor1-golf", name: "高尔夫球房间" },
+          { id: "floor1-golf-bathroom", name: "高尔夫球房间卫生间" }
+        ]
+      },
+      {
+        group: "二层",
+        rooms: [
+          { id: "floor2-living", name: "二层客厅" },
+          { id: "floor2-mom-bedroom", name: "妈妈卧室" },
+          { id: "floor2-grandparents-bedroom", name: "姥姥姥爷卧室" },
+          { id: "floor2-angela-bedroom", name: "Angela 卧室" },
+          { id: "floor2-alisa-bedroom", name: "Alisa 卧室" },
+          { id: "floor2-aron-bedroom", name: "Aron 卧室" }
+        ]
+      },
+      {
+        group: "屋外",
+        rooms: [
+          { id: "outdoor-lawn", name: "草坪" },
+          { id: "outdoor-parking", name: "停车场" },
+          { id: "outdoor-water", name: "水系" }
+        ]
+      }
+    ];
+
+    const starterTasks = [
+      { id: uid(), title: "准备早餐和孩子水壶", assignee: "chef", location: "floor1-kitchen", time: "07:00", status: "done", urgent: false },
+      { id: uid(), title: "安排 Aron 去兴趣班", assignee: "driver", location: "outdoor-parking", time: "08:20", status: "doing", urgent: true },
+      { id: uid(), title: "大客厅和餐厅整理", assignee: "helperA", location: "floor1-living", time: "10:00", status: "todo", urgent: false },
+      { id: uid(), title: "陪 Alisa 完成英文阅读", assignee: "kk", location: "floor2-alisa-bedroom", time: "16:30", status: "todo", urgent: false },
+      { id: uid(), title: "检查姥姥今天的药", assignee: "helperB", location: "floor2-grandparents-bedroom", time: "19:00", status: "issue", urgent: false }
+    ];
+
+    const defaultDailyRoutines = {
+      helperA: [
+        { title: "大客厅整理", location: "floor1-living", time: "09:30" },
+        { title: "餐厅整理", location: "floor1-dining", time: "10:15" },
+        { title: "一层卫生间检查", location: "floor1-bathroom", time: "11:00" },
+        { title: "书房简单整理", location: "floor1-study", time: "15:00" }
+      ],
+      helperB: [
+        { title: "姥姥姥爷卧室整理", location: "floor2-grandparents-bedroom", time: "09:00" },
+        { title: "二层客厅整理", location: "floor2-living", time: "10:30" },
+        { title: "检查姥姥姥爷日用品", location: "floor2-grandparents-bedroom", time: "16:00" }
+      ],
+      helperC: [
+        { title: "Angela 卧室整理", location: "floor2-angela-bedroom", time: "09:30" },
+        { title: "Alisa 卧室整理", location: "floor2-alisa-bedroom", time: "10:00" },
+        { title: "Aron 卧室整理", location: "floor2-aron-bedroom", time: "10:30" },
+        { title: "高尔夫球房间整理", location: "floor1-golf", time: "14:30" }
+      ],
+      chef: [
+        { title: "准备早餐", location: "floor1-kitchen", time: "07:00" },
+        { title: "准备午餐", location: "floor1-kitchen", time: "11:30" },
+        { title: "准备晚餐", location: "floor1-kitchen", time: "17:30" },
+        { title: "厨房收尾检查", location: "floor1-kitchen", time: "20:00" }
+      ],
+      driver: [
+        { title: "检查今天用车安排", location: "outdoor-parking", time: "08:00" },
+        { title: "停车场车辆检查", location: "outdoor-parking", time: "09:00" },
+        { title: "确认妈妈今日行程", location: "floor2-mom-bedroom", time: "09:30" }
+      ],
+      driverLei: [
+        { title: "车辆清洁和油电检查", location: "outdoor-parking", time: "08:15" },
+        { title: "确认今日接送路线", location: "outdoor-parking", time: "09:15" }
+      ],
+      kk: [
+        { title: "Angela 学习安排", location: "floor2-angela-bedroom", time: "16:00" },
+        { title: "Alisa 英文阅读", location: "floor2-alisa-bedroom", time: "16:30" },
+        { title: "Aron 亲子阅读", location: "floor2-aron-bedroom", time: "17:00" }
+      ]
+    };
+
+    let appLanguage = "zh";
+    let dailyRoutines = loadRoutines();
+
+    const state = {
+      selectedMember: "all",
+      selectedDate: todayISO(),
+      rangeMode: "day",
+      filter: "all",
+      viewMode: "list",
+      actionMode: "natural",
+      editingRoutineIndex: null,
+      tasks: loadTasks(),
+      notices: JSON.parse(localStorage.getItem("familyNotices") || "[]"),
+      feedbacks: JSON.parse(localStorage.getItem("familyFeedbacks") || "[]"),
+      feedbackReadAt: Number(localStorage.getItem("familyFeedbackReadAt") || 0)
+    };
+
+    function loadTasks() {
+      const saved = localStorage.getItem("familyTasks");
+      if (!saved) return starterTasks;
+      try {
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed) || parsed.length === 0) return starterTasks;
+        return migrateTasks(parsed);
+      } catch (error) {
+        return starterTasks;
+      }
+    }
+
+    function loadRoutines() {
+      const saved = localStorage.getItem("familyRoutines");
+      const routines = saved ? JSON.parse(saved) : defaultDailyRoutines;
+      Object.keys(defaultDailyRoutines).forEach(assignee => {
+        if (!routines[assignee]) routines[assignee] = defaultDailyRoutines[assignee];
+      });
+      Object.keys(routines).forEach(assignee => {
+        routines[assignee] = routines[assignee].map(routine => ({
+          ...routine,
+          prep: routine.prep || suggestPrep(routine.title, routine.location)
+        }));
+      });
+      return routines;
+    }
+
+    function migrateTasks(tasks) {
+      const replacements = [
+        ["送小儿子去兴趣班", "安排 Aron 去兴趣班"],
+        ["陪二女儿完成英文阅读", "陪 Alisa 完成英文阅读"],
+        ["接二女儿放学", "接 Alisa 放学"],
+        ["检查外婆今天的药", "检查姥姥今天的药"],
+        ["客厅和餐厅整理", "大客厅和餐厅整理"]
+      ];
+      return tasks.map(task => {
+        const match = replacements.find(([oldTitle]) => task.title === oldTitle);
+        return {
+          ...task,
+          title: match ? match[1] : task.title,
+          date: task.date || todayISO(),
+          location: task.location || "none",
+          followUp: task.followUp || inferFollowUp(task),
+          prep: task.prep || suggestPrep(match ? match[1] : task.title, task.location || "none"),
+          prepReminderSent: task.prepReminderSent || false
+        };
+      });
+    }
+
+    function todayISO() {
+      const now = new Date();
+      const offset = now.getTimezoneOffset();
+      return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
+    }
+
+    function addDays(dateISO, days) {
+      const [year, month, day] = dateISO.split("-").map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day + days));
+      return date.toISOString().slice(0, 10);
+    }
+
+    function isSelectedDateToday() {
+      return state.selectedDate === todayISO();
+    }
+
+    function weekStartISO(dateISO) {
+      const [year, month, day] = dateISO.split("-").map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day));
+      const dayIndex = date.getUTCDay() || 7;
+      date.setUTCDate(date.getUTCDate() - dayIndex + 1);
+      return date.toISOString().slice(0, 10);
+    }
+
+    function weekEndISO(dateISO) {
+      return addDays(weekStartISO(dateISO), 6);
+    }
+
+    function datesForSelectedWeek() {
+      const dates = [];
+      let current = weekStartISO(state.selectedDate);
+      const end = weekEndISO(state.selectedDate);
+      while (current <= end) {
+        dates.push(current);
+        current = addDays(current, 1);
+      }
+      return dates;
+    }
+
+    function isWeekRange() {
+      return state.rangeMode === "week";
+    }
+
+    function dateInRange(taskDate) {
+      const date = taskDate || todayISO();
+      if (isWeekRange()) {
+        return date >= weekStartISO(state.selectedDate) && date <= weekEndISO(state.selectedDate);
+      }
+      return date === state.selectedDate;
+    }
+
+    function dateShortText(dateISO) {
+      const date = new Date(`${dateISO}T00:00:00`);
+      return new Intl.DateTimeFormat(appLanguage === "en" ? "en-US" : "zh-CN", {
+        month: "short",
+        day: "numeric",
+        weekday: "short"
+      }).format(date);
+    }
+
+    function uid() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+      return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function save() {
+      localStorage.setItem("familyTasks", JSON.stringify(state.tasks));
+      localStorage.setItem("familyNotices", JSON.stringify(state.notices.slice(0, 8)));
+      localStorage.setItem("familyRoutines", JSON.stringify(dailyRoutines));
+      localStorage.setItem("familyFeedbacks", JSON.stringify(state.feedbacks.slice(0, 30)));
+      localStorage.setItem("familyFeedbackReadAt", String(state.feedbackReadAt || 0));
+    }
+
+    function notifyAssignee(assigneeId, title) {
+      const assignee = memberById(assigneeId);
+      state.notices.unshift({
+        id: uid(),
+        text: `${assignee.name} 收到新事项：「${title}」`,
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      });
+    }
+
+    function addFeedback(fromId, text) {
+      state.feedbacks.unshift({
+        id: uid(),
+        from: fromId,
+        text,
+        createdAt: Date.now(),
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      });
+    }
+
+    function notifyPrep(task) {
+      const assignee = memberById(task.assignee);
+      state.notices.unshift({
+        id: uid(),
+        text: `${assignee.name} 15分钟后开始「${task.title}」。准备：${task.prep || suggestPrep(task.title, task.location)}`,
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      });
+    }
+
+    function memberById(id) {
+      return members.find(member => member.id === id) || members[0];
+    }
+
+    function followUpText(id) {
+      if (!id || id === "none") return appLanguage === "en" ? "None" : "无";
+      return memberById(id).name;
+    }
+
+    function shouldShowFollowUp(task) {
+      return ["daughter1", "daughter2", "son"].includes(task.assignee);
+    }
+
+    function inferFollowUp(task) {
+      if (!task || !["daughter1", "daughter2", "son"].includes(task.assignee)) return "none";
+      if (/阅读|英文|学习|作业|课/.test(task.title || "")) return "kk";
+      if (/兴趣班|音乐|钢琴|舞蹈|游泳|网球|高尔夫|篮球/.test(task.title || "")) return "helperA";
+      return "none";
+    }
+
+    function locationById(id) {
+      if (!id || id === "none") return appLanguage === "en" ? "No location" : "不指定地点";
+      for (const section of locations) {
+        const room = section.rooms.find(item => item.id === id);
+        if (room) return `${section.group} · ${room.name}`;
+      }
+      return appLanguage === "en" ? "No location" : "不指定地点";
+    }
+
+    function suggestPrep(title, location) {
+      const place = locationById(location);
+      if (title.includes("早餐") || title.includes("午餐") || title.includes("晚餐") || place.includes("厨房")) {
+        return "确认食材、餐具、孩子水壶和厨房台面，先把容易忘的物品放到手边。";
+      }
+      if (title.includes("用车") || title.includes("车辆") || title.includes("停车") || place.includes("停车场")) {
+        return "确认钥匙、手机、路线、车内物品和停车位置，提前检查车辆状态。";
+      }
+      if (title.includes("学习") || title.includes("阅读") || title.includes("Tutor")) {
+        return "准备课本、练习册、笔、计时器和水杯，提前把桌面清出来。";
+      }
+      if (title.includes("药") || title.includes("日用品") || title.includes("姥姥") || title.includes("姥爷")) {
+        return "核对清单、药盒、水杯和纸巾，发现缺少物品先提醒妈妈或陈先生。";
+      }
+      if (title.includes("草坪") || title.includes("水系")) {
+        return "准备户外工具、手套和防滑鞋，先确认电源、水源或周边安全。";
+      }
+      if (title.includes("卫生间")) {
+        return "准备清洁剂、手套、抹布、垃圾袋和补充用品，注意地面防滑。";
+      }
+      if (title.includes("整理") || title.includes("检查")) {
+        return "准备抹布、垃圾袋、收纳篮和补充用品，先检查是否有孩子或贵重物品。";
+      }
+      return location === "none"
+        ? "提前确认要带的物品、时间和联系人，不确定就先问妈妈或陈先生。"
+        : "提前确认地点、工具、相关物品和注意事项，不确定就先问妈妈或陈先生。";
+    }
+
+    function timeToMinutes(time) {
+      const [hours, minutes] = time.split(":").map(Number);
+      return hours * 60 + minutes;
+    }
+
+    function nowMinutes() {
+      const now = new Date();
+      return now.getHours() * 60 + now.getMinutes();
+    }
+
+    function checkPrepReminders() {
+      if (!isSelectedDateToday()) return;
+      const current = nowMinutes();
+      let changed = false;
+      state.tasks.forEach(task => {
+        if ((task.date || todayISO()) !== state.selectedDate) return;
+        if (task.status === "done" || task.prepReminderSent || !task.time) return;
+        const start = timeToMinutes(task.time);
+        if (current >= start - 15 && current < start) {
+          task.prepReminderSent = true;
+          notifyPrep(task);
+          changed = true;
+        }
+      });
+      if (changed) {
+        save();
+        render();
+      }
+    }
+
+    function statusText(status) {
+      const zh = { todo: "未开始", doing: "进行中", done: "已完成", issue: "有问题" };
+      const en = { todo: "Not started", doing: "Doing", done: "Done", issue: "Issue" };
+      return (appLanguage === "en" ? en : zh)[status];
+    }
+
+    function selectedDateText() {
+      const date = new Date(`${state.selectedDate}T00:00:00`);
+      const locale = appLanguage === "en" ? "en-US" : "zh-CN";
+      return new Intl.DateTimeFormat(locale, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        weekday: "long"
+      }).format(date);
+    }
+
+    function visibleTasks() {
+      return state.tasks
+        .filter(task => dateInRange(task.date || todayISO()))
+        .filter(task => state.selectedMember === "all" || task.assignee === state.selectedMember)
+        .filter(task => {
+          if (state.filter === "all") return true;
+          if (state.filter === "todo") return task.status !== "done";
+          if (state.filter === "urgent") return task.urgent;
+          return task.status === state.filter;
+        })
+        .sort((a, b) => `${a.date || todayISO()} ${a.time}`.localeCompare(`${b.date || todayISO()} ${b.time}`));
+    }
+
+    function renderMembers() {
+      const list = document.getElementById("memberList");
+      list.innerHTML = "";
+      members.forEach(member => {
+        const tasks = member.id === "all"
+          ? state.tasks.filter(task => dateInRange(task.date || todayISO()))
+          : state.tasks.filter(task => task.assignee === member.id && dateInRange(task.date || todayISO()));
+        const openCount = tasks.filter(task => task.status !== "done").length;
+        const button = document.createElement("button");
+        button.className = `member-button ${member.manager ? "manager" : ""} ${state.selectedMember === member.id ? "active" : ""}`;
+        button.type = "button";
+        button.innerHTML = `
+          <span class="avatar" style="background:${member.color}">${member.initials}</span>
+          <span>
+            <span class="member-name">${member.name}</span>
+            <span class="member-role">${member.role}</span>
+            ${member.manager ? `<span class="manager-mark">统筹权限</span>` : ""}
+          </span>
+          <span class="count">${openCount}</span>
+        `;
+        button.addEventListener("click", () => {
+          state.selectedMember = member.id;
+          resetRoutineForm();
+          render();
+        });
+        list.appendChild(button);
+      });
+    }
+
+    function renderAssignees() {
+      const selects = [document.getElementById("schedulePerson")].filter(Boolean);
+      selects.forEach(select => {
+        select.innerHTML = "";
+      members.filter(member => member.id !== "all").forEach(member => {
+        const option = document.createElement("option");
+        option.value = member.id;
+        option.textContent = member.name;
+        select.appendChild(option);
+      });
+      });
+    }
+
+    function renderLocations() {
+      const selects = [document.getElementById("routineLocation"), document.getElementById("scheduleLocation")].filter(Boolean);
+      selects.forEach(select => {
+        select.innerHTML = "";
+      locations.forEach(section => {
+        const group = document.createElement("optgroup");
+        group.label = section.group;
+        section.rooms.forEach(room => {
+          const option = document.createElement("option");
+          option.value = room.id;
+          option.textContent = room.name;
+          group.appendChild(option);
+        });
+        select.appendChild(group);
+      });
+      });
+    }
+
+    function renderComposerContext() {
+      const schedulePerson = document.getElementById("schedulePerson");
+      const scheduleDate = document.getElementById("scheduleDate");
+      const title = document.getElementById("quickPanelTitle");
+      if (scheduleDate && !scheduleDate.value) {
+        scheduleDate.value = state.selectedDate;
+      }
+      if (state.selectedMember !== "all") {
+        schedulePerson.value = state.selectedMember;
+        title.textContent = `${memberById(state.selectedMember).name}的快速处理`;
+      } else {
+        schedulePerson.value = "mom";
+        title.textContent = "快速处理";
+      }
+    }
+
+    function resetRoutineForm() {
+      state.editingRoutineIndex = null;
+      document.getElementById("routineName").value = "";
+      document.getElementById("routineTime").value = "09:00";
+      document.getElementById("routineLocation").value = "none";
+      document.getElementById("routinePrep").value = "";
+    }
+
+    function renderNaturalContext() {
+      const selected = memberById(state.selectedMember);
+      const feedbackPanel = document.getElementById("feedbackPanel");
+      const speaker = currentSpeakerId();
+      if (speaker === "mom" && state.actionMode === "feedback") {
+        state.actionMode = "natural";
+      }
+      feedbackPanel.hidden = state.actionMode !== "feedback" || speaker === "mom";
+    }
+
+    function currentSpeakerId() {
+      if (state.selectedMember === "all") return "mom";
+      return state.selectedMember;
+    }
+
+    function renderActionTabs() {
+      const speaker = currentSpeakerId();
+      if (speaker === "mom" && state.actionMode === "feedback") {
+        state.actionMode = "natural";
+      }
+      document.querySelectorAll("[data-action-mode]").forEach(button => {
+        const isFeedback = button.dataset.actionMode === "feedback";
+        button.hidden = speaker === "mom" && isFeedback;
+        button.classList.toggle("active", button.dataset.actionMode === state.actionMode);
+      });
+      document.getElementById("naturalPanel").hidden = state.actionMode !== "natural";
+      document.getElementById("linkedSchedulePanel").hidden = state.actionMode !== "schedule";
+      document.getElementById("feedbackPanel").hidden = state.actionMode !== "feedback" || speaker === "mom";
+    }
+
+    function renderRoutines() {
+      const panel = document.getElementById("routinePanel");
+      const title = document.getElementById("routineTitle");
+      const list = document.getElementById("routineList");
+      const form = document.getElementById("routineForm");
+      const generateAll = document.getElementById("generateAllBtn");
+      const selected = memberById(state.selectedMember);
+      const routines = dailyRoutines[state.selectedMember] || [];
+
+      if (state.selectedMember === "all") {
+        title.textContent = "每日固定事项";
+        form.style.display = "none";
+        generateAll.style.display = "";
+        list.innerHTML = `<div class="empty">这里不是编辑区，是早上一键排班用的。点“生成全部日常”，佣人、齐厨师、管家陈先生和 KK 的固定工作会一次排好。要编辑模板，请点左边某个人，在那个人页面里修改。</div>`;
+        panel.style.display = "";
+        return;
+      }
+
+      title.textContent = `${selected.name}的每日固定事项`;
+      panel.style.display = "";
+      form.style.display = "";
+      generateAll.style.display = "none";
+      if (!routines.length) {
+        list.innerHTML = `<div class="empty">这个人还没有固定日常。可以先用上面的添加栏临时安排。</div>`;
+        return;
+      }
+
+      list.innerHTML = "";
+      routines.forEach((routine, index) => {
+        const card = document.createElement("div");
+        card.className = "routine-card";
+        card.innerHTML = `
+          <button class="routine-button ${state.editingRoutineIndex === index ? "active" : ""}" type="button" data-action="add">
+            <span class="routine-title">${routine.title}</span>
+            <span class="routine-meta">${routine.time} · ${locationById(routine.location)}</span>
+            <span class="routine-meta">提前准备：${routine.prep || suggestPrep(routine.title, routine.location)}</span>
+          </button>
+          <div class="routine-card-actions">
+            <button class="action" type="button" data-action="edit">修改</button>
+            <button class="action danger" type="button" data-action="delete">删除</button>
+          </div>
+        `;
+        card.querySelector('[data-action="add"]').addEventListener("click", () => addRoutineTask(state.selectedMember, routine));
+        card.querySelector('[data-action="edit"]').addEventListener("click", () => editRoutine(index));
+        card.querySelector('[data-action="delete"]').addEventListener("click", () => deleteRoutine(index));
+        list.appendChild(card);
+      });
+    }
+
+    function editRoutine(index) {
+      const routine = dailyRoutines[state.selectedMember][index];
+      state.editingRoutineIndex = index;
+      document.getElementById("routineName").value = routine.title;
+      document.getElementById("routineTime").value = routine.time;
+      document.getElementById("routineLocation").value = routine.location;
+      document.getElementById("routinePrep").value = routine.prep || suggestPrep(routine.title, routine.location);
+      render();
+    }
+
+    function deleteRoutine(index) {
+      dailyRoutines[state.selectedMember].splice(index, 1);
+      resetRoutineForm();
+      save();
+      render();
+    }
+
+    function addRoutineTask(assignee, routine) {
+      const exists = state.tasks.some(task =>
+        task.assignee === assignee &&
+        (task.date || todayISO()) === state.selectedDate &&
+        task.title === routine.title &&
+        task.location === routine.location &&
+        task.time === routine.time &&
+        task.status !== "done"
+      );
+      if (exists) return;
+
+      state.tasks.push({
+        id: uid(),
+        title: routine.title,
+        assignee,
+        date: state.selectedDate,
+        location: routine.location,
+        time: routine.time,
+        prep: routine.prep || suggestPrep(routine.title, routine.location),
+        prepReminderSent: false,
+        status: "todo",
+        urgent: false
+      });
+      notifyAssignee(assignee, routine.title);
+      save();
+      render();
+    }
+
+    function generateAllRoutines() {
+      const addedByPerson = {};
+      Object.entries(dailyRoutines).forEach(([assignee, routines]) => {
+        routines.forEach(routine => addRoutineTaskSilently(assignee, routine));
+        addedByPerson[assignee] = state.tasks.filter(task =>
+          task.assignee === assignee &&
+          (task.date || todayISO()) === state.selectedDate &&
+          routines.some(routine => routine.title === task.title && routine.time === task.time && routine.location === task.location) &&
+          task.status !== "done"
+        ).length;
+      });
+      Object.entries(addedByPerson).forEach(([assignee, count]) => {
+        if (!count) return;
+        state.notices.unshift({
+          id: uid(),
+          text: `${memberById(assignee).name} ${selectedDateText()} 固定日常已排好，共 ${count} 项。`,
+          time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+        });
+      });
+      state.notices.unshift({
+        id: uid(),
+        text: `${selectedDateText()} 的全部固定日常已经生成。当天事项开始前 15 分钟会显示准备提醒。`,
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      });
+      save();
+      render();
+    }
+
+    function addRoutineTaskSilently(assignee, routine) {
+      const exists = state.tasks.some(task =>
+        task.assignee === assignee &&
+        (task.date || todayISO()) === state.selectedDate &&
+        task.title === routine.title &&
+        task.location === routine.location &&
+        task.time === routine.time &&
+        task.status !== "done"
+      );
+      if (exists) return;
+      state.tasks.push({
+        id: uid(),
+        title: routine.title,
+        assignee,
+        date: state.selectedDate,
+        location: routine.location,
+        time: routine.time,
+        prep: routine.prep || suggestPrep(routine.title, routine.location),
+        prepReminderSent: false,
+        status: "todo",
+        urgent: false
+      });
+    }
+
+    function createTask({ title, assignee, location = "none", time = "09:00", prep, followUp = "none", date = state.selectedDate }) {
+      state.filter = "all";
+      state.tasks.push({
+        id: uid(),
+        title,
+        assignee,
+        date,
+        location,
+        time,
+        followUp,
+        prep: prep || suggestPrep(title, location),
+        prepReminderSent: false,
+        status: "todo",
+        urgent: false
+      });
+      notifyAssignee(assignee, title);
+    }
+
+    function parseNaturalRequest(text, requesterId) {
+      const requester = memberById(requesterId);
+      const clean = text.replace(/\s+/g, " ").trim();
+      const parts = splitCompoundRequest(clean);
+      if (parts.length > 1) {
+        parts.forEach(part => parseNaturalRequest(part, requesterId));
+        state.notices.unshift({
+          id: uid(),
+          text: `小助手已把一句话拆成 ${parts.length} 个安排分别处理。`,
+          time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+        });
+        return;
+      }
+      const tasks = [];
+      const lower = clean.toLowerCase();
+      const isPrivateFeedback = /反馈|告诉妈妈|只给妈妈|妈妈知道/.test(clean);
+      const personId = detectPersonId(clean, requesterId);
+
+      if (isPrivateFeedback) {
+        addFeedback(requesterId, clean);
+      }
+
+      if (/吃|喝|吃饭|面包|酸奶|牛奶|水果|午餐|午饭|早餐|早饭|晚餐|晚饭/.test(clean)) {
+        const time = extractTime(clean) || (/晚|晚上|晚餐/.test(clean) ? "17:30" : /早|早上|早餐|早饭/.test(clean) ? "07:00" : "11:30");
+        const meal = inferMealName(clean, time);
+        const eater = memberById(personId);
+        repeatDatesForRequest(clean).forEach(date => {
+          tasks.push({
+            title: `${eater.name}${meal}：${clean}`,
+            assignee: personId,
+            date,
+            location: "none",
+            time,
+            followUp: "driver",
+            prep: "到时间前确认自己是否还需要这个安排，有变化就告诉妈妈或管家陈先生。"
+          });
+          tasks.push({
+            title: `准备${eater.name}的${meal}需求：${clean}`,
+            assignee: "chef",
+            date,
+            location: "floor1-kitchen",
+            time,
+            prep: "确认食材、过敏忌口、餐具和送达时间，准备好后反馈给妈妈或管家陈先生。"
+          });
+          tasks.push({
+            title: `跟进${eater.name}的${meal}需求：${clean}`,
+            assignee: "driver",
+            date,
+            location: "none",
+            time: timeToMinutes(time) > 30 ? minutesToTime(timeToMinutes(time) - 30) : time,
+            prep: "确认齐厨师已收到需求，必要时提醒妈妈，并确认孩子是否按时拿到。"
+          });
+        });
+      } else if (isScheduleRequest(clean)) {
+        const time = extractTime(clean) || "15:00";
+        const companion = hasCompanionMention(clean) ? detectCompanion(clean) : defaultCompanionForSchedule(clean);
+        const dates = repeatDatesForRequest(clean);
+        dates.forEach(date => addLinkedSchedule({
+          personId,
+          title: extractActivityTitle(clean),
+          time,
+          location: "none",
+          rideMode: inferRideMode(clean),
+          companionId: companion,
+          driverId: detectDriver(clean),
+          date,
+          suppressNotice: dates.length > 1
+        }));
+        state.notices.unshift({
+          id: uid(),
+          text: dates.length > 1
+            ? `小助手已把「${clean}」排进本周 ${dates.length} 天，并自动生成接送和陪同事项。`
+            : `小助手已把「${clean}」整理成联动日程。`,
+          time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+        });
+        return;
+      } else if (/车|接|送|司机|出门|学校|上课|放学/.test(clean)) {
+        tasks.push({
+          title: `${requester.name}的用车/接送需求：${clean}`,
+          assignee: "driver",
+          location: "outdoor-parking",
+          time: "09:00",
+          prep: "确认时间、路线、钥匙、手机和车内物品，提前联系相关人员。"
+        });
+      } else if (/作业|学习|英文|阅读|考试|练习|老师/.test(clean) || lower.includes("homework")) {
+        tasks.push({
+          title: `${requester.name}的学习需求：${clean}`,
+          assignee: "kk",
+          location: requesterId === "daughter2" ? "floor2-alisa-bedroom" : requesterId === "daughter1" ? "floor2-angela-bedroom" : requesterId === "son" ? "floor2-aron-bedroom" : "none",
+          time: "16:30",
+          prep: "准备课本、练习册、笔和水杯，提前确认孩子今天的学习目标。"
+        });
+      } else if (/打扫|整理|清洁|收拾|卫生/.test(clean)) {
+        tasks.push({
+          title: `${requester.name}提出的整理需求：${clean}`,
+          assignee: "helperA",
+          location: "none",
+          time: "10:00",
+          prep: "准备清洁用品、垃圾袋和收纳篮，先确认是否有贵重物品。"
+        });
+      } else if (!isPrivateFeedback) {
+        tasks.push({
+          title: `${requester.name}的请求：${clean}`,
+          assignee: "driver",
+          location: "none",
+          time: "09:30",
+          prep: "先确认这件事该由谁处理，再同步给妈妈。"
+        });
+        addFeedback(requesterId, clean);
+      }
+
+      if (tasks.length) {
+        tasks.forEach(task => createTask(task));
+        state.notices.unshift({
+          id: uid(),
+          text: `小助手已把${requester.name}的一句话要求整理成 ${tasks.length} 个事项。`,
+          time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+        });
+      }
+    }
+
+    function repeatDatesForRequest(text) {
+      return /本周.*每天|这周.*每天|每天.*本周|每天.*这周|每天/.test(text)
+        ? datesForSelectedWeek()
+        : [state.selectedDate];
+    }
+
+    function inferMealName(text, time) {
+      if (/晚|晚上|晚餐|晚饭/.test(text)) return "晚餐";
+      if (/早|早上|早餐|早饭/.test(text)) return "早餐";
+      if (/午|中午|午餐|午饭/.test(text)) return "午餐";
+      const minutes = timeToMinutes(time);
+      if (minutes < 10 * 60 + 30) return "早餐";
+      if (minutes < 15 * 60 + 30) return "午餐";
+      return "晚餐";
+    }
+
+    function childMentionPrefix(text) {
+      const match = text.match(/^(angela|alisa|aron|安安|李馨逸|玥|月月|玥玥|李馨玥|康康|李兴睿|大女儿|二女儿|小儿子|妈妈|张老师|张辉|爸爸)/i);
+      return match ? match[0] : "";
+    }
+
+    function repeatTextPrefix(text) {
+      const match = text.match(/本周每天|这周每天|每天/);
+      return match ? match[0] : "";
+    }
+
+    function splitCompoundRequest(text) {
+      const hasFood = /吃|喝|吃饭|面包|酸奶|牛奶|水果|早饭|早餐|午饭|午餐|晚饭|晚餐/.test(text);
+      const hasActivity = /兴趣班|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|围棋|上课|课外|培训/.test(text);
+      if (!hasFood || !hasActivity) return [text];
+
+      const subject = childMentionPrefix(text);
+      const repeat = repeatTextPrefix(text);
+      const timePattern = "(?:早上|上午|中午|下午|晚上)?\\s*(?:\\d{1,2}|[一二两三四五六七八九十]{1,3})(?:[:：]\\d{2}|点半?|点)?";
+      const timeRegex = new RegExp(timePattern, "g");
+      const timeMatches = [...text.matchAll(timeRegex)].filter(match => match[0].trim());
+      const withContext = part => {
+        const needsSubject = subject && !part.includes(subject);
+        const needsRepeat = repeat && !/每天|本周每天|这周每天/.test(part);
+        return `${needsSubject ? subject : ""}${needsRepeat ? repeat : ""}${part}`.trim();
+      };
+      if (timeMatches.length > 1) {
+        const clauses = timeMatches.map((match, index) => {
+          const next = timeMatches[index + 1];
+          return text
+            .slice(match.index, next ? next.index : text.length)
+            .replace(/^[，,。；;\s]+|[，,。；;\s]+$/g, "")
+            .trim();
+        }).filter(part => /吃|喝|吃饭|面包|酸奶|牛奶|水果|早饭|早餐|午饭|午餐|晚饭|晚餐|兴趣班|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|围棋|上课|课外|培训/.test(part));
+        if (clauses.length > 1) return clauses.map(withContext);
+      }
+
+      const mealPattern = new RegExp(`${timePattern}\\s*(?:起床)?(?:吃)?(?:饭|早饭|早餐|午饭|午餐|晚饭|晚餐|面包|酸奶|牛奶|水果)`);
+      const activityPattern = new RegExp(`${timePattern}\\s*(?:围棋课|围棋|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|兴趣班|上课|培训)`);
+      const mealMatch = text.match(mealPattern);
+      const activityMatch = text.match(activityPattern);
+      if (!mealMatch || !activityMatch || mealMatch[0] === activityMatch[0]) return [text];
+      return [withContext(mealMatch[0]), withContext(activityMatch[0])];
+    }
+
+    function detectPersonId(text, fallbackId) {
+      if (/妈妈|张老师|张辉/.test(text)) return "mom";
+      if (/爸爸/.test(text)) return "dad";
+      return detectChildId(text, fallbackId);
+    }
+
+    function detectChildId(text, fallbackId) {
+      if (/angela|安安|李馨逸|大女儿/i.test(text)) return "daughter1";
+      if (/alisa|玥|月月|玥玥|李馨玥|二女儿/i.test(text)) return "daughter2";
+      if (/aron|康康|李兴睿|小儿子/i.test(text)) return "son";
+      return ["daughter1", "daughter2", "son"].includes(fallbackId) ? fallbackId : fallbackId;
+    }
+
+    function detectCompanion(text) {
+      if (/kk|KK|老师|家庭教师/i.test(text)) return "kk";
+      if (/佣人B|helper b|helperB|B陪|b陪/i.test(text)) return "helperB";
+      if (/佣人C|helper c|helperC|C陪|c陪/i.test(text)) return "helperC";
+      if (/不陪|不用陪|不需要陪/i.test(text)) return "none";
+      return "helperA";
+    }
+
+    function detectDriver(text) {
+      if (/阿磊|司机阿磊|a lei|alei/i.test(text)) return "driverLei";
+      return "driver";
+    }
+
+    function chineseHourToNumber(text) {
+      const map = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+      if (map[text]) return map[text];
+      if (text === "十") return 10;
+      if (text.startsWith("十")) return 10 + (map[text.slice(1)] || 0);
+      if (text.endsWith("十")) return (map[text[0]] || 1) * 10;
+      if (text.includes("十")) {
+        const [tens, ones] = text.split("十");
+        return (map[tens] || 1) * 10 + (map[ones] || 0);
+      }
+      return 0;
+    }
+
+    function extractTime(text) {
+      const chineseMatch = text.match(/([一二两三四五六七八九十]{1,3})点(半)?/);
+      if (chineseMatch) {
+        let hour = chineseHourToNumber(chineseMatch[1]);
+        const minute = chineseMatch[2] ? 30 : 0;
+        if (/下午|晚上/.test(text) && hour < 12) hour += 12;
+        return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+      }
+      const match = text.match(/(\d{1,2})[:点：]?(\d{2})?/);
+      if (!match) return "";
+      let hour = Number(match[1]);
+      const minute = Number(match[2] || 0);
+      if (/下午|晚上/.test(text) && hour < 12) hour += 12;
+      return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    }
+
+    function extractActivityTitle(text) {
+      if (/音乐课/.test(text)) return "音乐课";
+      if (/兴趣班/.test(text)) return "兴趣班";
+      if (/钢琴/.test(text)) return "钢琴课";
+      if (/舞蹈/.test(text)) return "舞蹈课";
+      if (/游泳/.test(text)) return "游泳课";
+      if (/网球/.test(text)) return "网球课";
+      if (/高尔夫/.test(text)) return "高尔夫课";
+      if (/篮球|打球/.test(text)) return "篮球课";
+      if (/围棋/.test(text)) return "围棋课";
+      return text.length > 18 ? `${text.slice(0, 18)}...` : text;
+    }
+
+    function minutesToTime(total) {
+      const hours = Math.max(0, Math.floor(total / 60));
+      const minutes = total % 60;
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    }
+
+    function clampDayMinutes(total) {
+      return Math.max(0, Math.min(23 * 60 + 59, total));
+    }
+
+    function addLinkedSchedule({ personId, title, time, location, rideMode, companionId = "helperA", driverId = "driver", date = state.selectedDate, suppressNotice = false }) {
+      const person = memberById(personId);
+      const driver = memberById(driverId);
+      const personIsDriver = personId === "driver" || personId === "driverLei";
+      const start = timeToMinutes(time);
+      const mainTitle = `${person.name}：${title}`;
+      createTask({
+        title: mainTitle,
+        assignee: personId,
+        date,
+        location,
+        time,
+        followUp: companionId !== "none" && personId !== "mom" && !personIsDriver
+          ? companionId
+          : rideMode !== "no"
+            ? driverId
+            : "none",
+        prep: suggestSchedulePrep(personId, title, location)
+      });
+
+      if (rideMode === "no" && (companionId === "none" || personId === "mom" || personIsDriver)) {
+        if (!suppressNotice) {
+          state.notices.unshift({
+            id: uid(),
+            text: `已保存${person.name}的日程「${title}」，没有生成接送任务。`,
+            time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+          });
+        }
+        return;
+      }
+
+      const linkedTasks = [];
+      if (rideMode === "yes" || rideMode === "dropoff") {
+        linkedTasks.push({
+          title: `送${person.name}去${title}`,
+          time: minutesToTime(clampDayMinutes(start - 30)),
+          prep: "确认出发时间、路线、车钥匙、随身物品和目的地，提前提醒本人准备下楼。"
+        });
+        linkedTasks.push({
+          title: `确认${person.name}已到达${title}`,
+          time,
+          prep: "到达后确认本人安全进入地点，并把情况同步给妈妈。"
+        });
+      }
+      if (rideMode === "yes" || rideMode === "pickup") {
+        linkedTasks.push({
+          title: `接${person.name}从${title}回来`,
+          time: minutesToTime(clampDayMinutes(start + 60)),
+          prep: "提前确认结束时间、停车位置和返程路线，如时间变化及时同步妈妈。"
+        });
+      }
+
+      linkedTasks.forEach(task => createTask({
+        ...task,
+        assignee: driverId,
+        date,
+        location: location === "none" ? "outdoor-parking" : location
+      }));
+
+      const companionTasks = [];
+      if (companionId !== "none" && personId !== "mom" && !personIsDriver) {
+        companionTasks.push({
+          title: `陪同${person.name}去${title}`,
+          assignee: companionId,
+          date,
+          location,
+          time: minutesToTime(clampDayMinutes(start - 25)),
+          prep: `准备陪同${person.name}需要的包、水杯、课程用品和联系手机，提前与${driver.name}确认上车时间。`
+        });
+        companionTasks.push({
+          title: `陪同${person.name}完成${title}并反馈`,
+          assignee: companionId,
+          date,
+          location,
+          time,
+          prep: "确认孩子安全进入活动地点，结束后把情况反馈给妈妈或管家陈先生。"
+        });
+      }
+      companionTasks.forEach(task => createTask(task));
+
+      if (!suppressNotice) {
+        state.notices.unshift({
+          id: uid(),
+          text: `已联动生成${person.name}的「${title}」、${linkedTasks.length} 个${driver.name}接送/用车事项${companionTasks.length ? `，以及 ${companionTasks.length} 个陪同事项` : ""}。`,
+          time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+        });
+      }
+    }
+
+    function suggestSchedulePrep(personId, title, location) {
+      const person = memberById(personId);
+      if (/会议|公司|开会|见客|工作/.test(title)) {
+        return "准备手机、电脑、文件、包和出门衣物，提前确认管家陈先生的用车安排。";
+      }
+      if (/音乐|钢琴|课|学习|培训|舞蹈|运动|篮球|游泳|网球|高尔夫/.test(title)) {
+        return `准备${person.name}上课需要的书包、教材、乐器或水杯，提前确认接送时间。`;
+      }
+      return location === "none"
+        ? "提前确认时间、随身物品和是否需要接送。"
+        : `提前确认${locationById(location)}、随身物品和是否需要接送。`;
+    }
+
+    function renderTasks() {
+      const list = document.getElementById("taskList");
+      const title = document.getElementById("taskPanelTitle");
+      const selected = memberById(state.selectedMember);
+      const rangeText = !isWeekRange()
+        ? (appLanguage === "en" ? "Selected day" : "当天")
+        : (appLanguage === "en" ? "This week" : "本周");
+      title.textContent = state.selectedMember === "all"
+        ? `${rangeText}${appLanguage === "en" ? " tasks" : "任务"}`
+        : `${selected.name}${appLanguage === "en" ? ` ${rangeText} tasks` : `的${rangeText}任务`}`;
+      list.innerHTML = "";
+      const tasks = visibleTasks();
+
+      if (!tasks.length) {
+        list.innerHTML = `<div class="empty">这里暂时没有任务。妈妈添加后，对应的人就能看到。</div>`;
+        return;
+      }
+
+      if (state.viewMode === "visual") {
+        renderVisualTasks(list, tasks);
+        return;
+      }
+
+      tasks.forEach(task => {
+        const assignee = memberById(task.assignee);
+        const prep = task.prep || suggestPrep(task.title, task.location);
+        const locationBadge = task.location && task.location !== "none"
+          ? `<span class="badge">${locationById(task.location)}</span>`
+          : "";
+        const followUpBadge = shouldShowFollowUp(task)
+          ? `<span class="badge">${appLanguage === "en" ? "Follow-up" : "跟进人"}：${followUpText(task.followUp || inferFollowUp(task))}</span>`
+          : "";
+        const dateBadge = isWeekRange() ? `<span class="badge">${dateShortText(task.date || todayISO())}</span>` : "";
+        const card = document.createElement("article");
+        card.className = `task ${task.urgent ? "urgent" : ""} ${task.status}`;
+        card.innerHTML = `
+          <div class="task-top">
+            <div>
+              <h3 class="task-title">${task.title}</h3>
+              <div class="task-meta">
+                ${dateBadge}
+                <span class="badge">${task.time}</span>
+                <span class="badge">${assignee.name}</span>
+                ${locationBadge}
+                ${followUpBadge}
+                ${task.urgent ? `<span class="badge urgent">${appLanguage === "en" ? "Urgent" : "加急中"}</span>` : ""}
+                ${task.status === "issue" ? `<span class="badge issue">${appLanguage === "en" ? "Needs attention" : "需要妈妈看一下"}</span>` : ""}
+              </div>
+            </div>
+            <span class="badge status ${task.status === "done" ? "done" : ""}">${statusText(task.status)}</span>
+          </div>
+          <div class="prep-line">${appLanguage === "en" ? "15-min prep" : "开始前 15 分钟提醒"}：${prep}</div>
+          <div class="task-actions">
+            <button class="action" type="button" data-action="doing">${appLanguage === "en" ? "Start" : "开始"}</button>
+            <button class="action" type="button" data-action="done">${appLanguage === "en" ? "Done" : "完成"}</button>
+            <button class="action warn" type="button" data-action="issue">${task.status === "issue" ? (appLanguage === "en" ? "Resolved" : "没问题了") : (appLanguage === "en" ? "Issue" : "有问题")}</button>
+            <button class="action danger" type="button" data-action="urgent">${task.urgent ? (appLanguage === "en" ? "Cancel urgent" : "取消加急") : (appLanguage === "en" ? "Urgent" : "加急")}</button>
+            <button class="action" type="button" data-action="delete">${appLanguage === "en" ? "Delete" : "删除"}</button>
+          </div>
+        `;
+        card.querySelectorAll("button").forEach(button => {
+          button.addEventListener("click", () => updateTask(task.id, button.dataset.action));
+        });
+        list.appendChild(card);
+      });
+    }
+
+    function renderVisualTasks(container, tasks) {
+      container.innerHTML = "";
+      const board = document.createElement("div");
+      board.className = "visual-board";
+      const groups = state.selectedMember === "all"
+        ? members.filter(member => member.id !== "all" && tasks.some(task => task.assignee === member.id))
+        : [memberById(state.selectedMember)];
+
+      groups.forEach(member => {
+        const ownTasks = tasks.filter(task => task.assignee === member.id);
+        if (!ownTasks.length) return;
+        const done = ownTasks.filter(task => task.status === "done").length;
+        const percent = Math.round((done / ownTasks.length) * 100);
+        const card = document.createElement("section");
+        card.className = "visual-card";
+        card.innerHTML = `
+          <h3>${member.name}</h3>
+          <div class="visual-meter"><span style="width:${percent}%"></span></div>
+          <div class="routine-meta">${done}/${ownTasks.length} ${appLanguage === "en" ? "done" : "已完成"}</div>
+        `;
+        ownTasks.slice(0, 5).forEach(task => {
+          const item = document.createElement("div");
+          item.className = "visual-task";
+          item.innerHTML = `
+            <strong>${isWeekRange() ? `${dateShortText(task.date || todayISO())} · ` : ""}${task.time} · ${task.title}</strong>
+            <span>${task.location === "none" ? locationById(task.location) : locationById(task.location)} · ${statusText(task.status)}</span>
+            ${shouldShowFollowUp(task) ? `<span>${appLanguage === "en" ? "Follow-up" : "跟进人"}：${followUpText(task.followUp || inferFollowUp(task))}</span>` : ""}
+            <span>${appLanguage === "en" ? "Prep" : "准备"}：${task.prep || suggestPrep(task.title, task.location)}</span>
+          `;
+          card.appendChild(item);
+        });
+        board.appendChild(card);
+      });
+      container.appendChild(board);
+    }
+
+    function updateTask(id, action) {
+      const task = state.tasks.find(item => item.id === id);
+      if (!task) return;
+      if (action === "issue") {
+        task.status = task.status === "issue" ? "todo" : "issue";
+      } else if (["todo", "doing", "done"].includes(action)) {
+        task.status = action;
+      }
+      if (action === "urgent") {
+        task.urgent = !task.urgent;
+        if (task.urgent) {
+          const assignee = memberById(task.assignee);
+          state.notices.unshift({
+            id: uid(),
+            text: `${assignee.name} 收到加急事项：请优先处理「${task.title}」。准备：${task.prep || suggestPrep(task.title, task.location)}`,
+            time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+          });
+        }
+      }
+      if (action === "delete") {
+        state.tasks = state.tasks.filter(item => item.id !== id);
+      }
+      save();
+      render();
+    }
+
+    function renderSummary() {
+      const dateTasks = state.tasks.filter(task => dateInRange(task.date || todayISO()));
+      document.getElementById("doneCount").textContent = dateTasks.filter(task => task.status === "done").length;
+      document.getElementById("urgentCount").textContent = dateTasks.filter(task => task.urgent).length;
+      document.getElementById("doingCount").textContent = dateTasks.filter(task => task.status === "doing").length;
+      document.getElementById("issueCount").textContent = dateTasks.filter(task => task.status === "issue").length;
+
+      const progress = document.getElementById("progressList");
+      progress.innerHTML = "";
+      members.filter(member => member.id !== "all" && !member.manager).forEach(member => {
+        const ownTasks = dateTasks.filter(task => task.assignee === member.id);
+        const done = ownTasks.filter(task => task.status === "done").length;
+        const percent = ownTasks.length ? Math.round((done / ownTasks.length) * 100) : 0;
+        const row = document.createElement("div");
+        row.className = "progress-row";
+        row.innerHTML = `
+          <strong>${member.name}</strong>
+          <span class="bar"><span class="fill" style="width:${percent}%"></span></span>
+          <span>${done}/${ownTasks.length}</span>
+        `;
+        progress.appendChild(row);
+      });
+    }
+
+    function todayTasks() {
+      return state.tasks.filter(task => (task.date || todayISO()) === todayISO());
+    }
+
+    function feedbackCreatedAt(feedback) {
+      return feedback.createdAt || 1;
+    }
+
+    function unreadFeedbacks() {
+      return state.feedbacks.filter(feedback => feedbackCreatedAt(feedback) > state.feedbackReadAt);
+    }
+
+    function renderMomDashboard() {
+      const dashboard = document.getElementById("momDashboard");
+      const dot = document.getElementById("feedbackUnreadDot");
+      const canSee = state.selectedMember === "all" || state.selectedMember === "mom";
+      dashboard.style.display = canSee ? "" : "none";
+      dot.hidden = !canSee;
+      if (!canSee) return;
+
+      const tasks = todayTasks();
+      const openTasks = tasks.filter(task => task.status !== "done");
+      const issueTasks = tasks.filter(task => task.status === "issue" || task.urgent);
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const upcoming = openTasks
+        .filter(task => {
+          const start = timeToMinutes(task.time || "09:00");
+          return start >= nowMinutes && start <= nowMinutes + 90;
+        })
+        .sort((a, b) => a.time.localeCompare(b.time))
+        .slice(0, 3);
+      const unread = unreadFeedbacks();
+      const latestFeedback = state.feedbacks[0];
+
+      document.getElementById("unreadFeedbackCount").textContent = unread.length;
+      document.getElementById("todayIssueCount").textContent = issueTasks.length;
+      document.getElementById("todayOpenCount").textContent = openTasks.length;
+      document.getElementById("upcomingCount").textContent = upcoming.length;
+      dot.textContent = unread.length;
+      dot.hidden = unread.length === 0;
+
+      document.getElementById("latestFeedbackText").textContent = latestFeedback
+        ? `${memberById(latestFeedback.from).name}：${latestFeedback.text}`
+        : "暂无新的私密反馈";
+      document.getElementById("todayIssueText").textContent = issueTasks.length
+        ? `${memberById(issueTasks[0].assignee).name}：${issueTasks[0].title}`
+        : "今天没有异常事项";
+      document.getElementById("todayBusyText").textContent = openTasks.length
+        ? `${new Set(openTasks.map(task => task.assignee)).size} 个人今天还有事项`
+        : "今天暂时没有待办";
+      document.getElementById("upcomingText").textContent = upcoming.length
+        ? `${upcoming[0].time} ${memberById(upcoming[0].assignee).name}：${upcoming[0].title}`
+        : "暂无即将开始事项";
+
+      const focus = document.getElementById("momFocusList");
+      focus.innerHTML = "";
+      const busyPeople = members
+        .filter(member => member.id !== "all")
+        .map(member => ({
+          member,
+          total: tasks.filter(task => task.assignee === member.id).length,
+          open: openTasks.filter(task => task.assignee === member.id).length
+        }))
+        .filter(item => item.total > 0)
+        .sort((a, b) => b.open - a.open || b.total - a.total)
+        .slice(0, 4);
+
+      const focusRows = [
+        ...upcoming.map(task => ({
+          title: `${task.time} 马上开始：${task.title}`,
+          value: memberById(task.assignee).name
+        })),
+        ...issueTasks.slice(0, 2).map(task => ({
+          title: `${task.urgent ? "加急" : "异常"}：${task.title}`,
+          value: memberById(task.assignee).name
+        })),
+        ...busyPeople.map(item => ({
+          title: `${item.member.name} 今天有 ${item.total} 项`,
+          value: `${item.open} 未完成`
+        }))
+      ].slice(0, 6);
+
+      if (!focusRows.length) {
+        focus.innerHTML = `<div class="empty">今天目前很清爽，没有需要妈妈马上处理的提醒。</div>`;
+        return;
+      }
+
+      focusRows.forEach(row => {
+        const item = document.createElement("div");
+        item.className = "dashboard-row";
+        item.innerHTML = `<strong>${row.title}</strong><span class="badge">${row.value}</span>`;
+        focus.appendChild(item);
+      });
+    }
+
+    function renderNotices() {
+      const list = document.getElementById("noticeList");
+      list.innerHTML = "";
+      const notices = state.notices.slice(0, 5);
+      if (!notices.length) {
+        list.innerHTML = `<div class="empty">新事项、加急和准备提醒会出现在这里。</div>`;
+        return;
+      }
+      notices.forEach(notice => {
+        const item = document.createElement("div");
+        item.className = "notice";
+        item.textContent = `${notice.time}  ${notice.text}`;
+        list.appendChild(item);
+      });
+    }
+
+    function renderPrivateFeedback() {
+      const head = document.getElementById("privateFeedbackHead");
+      const list = document.getElementById("privateFeedbackList");
+      const canSee = state.selectedMember === "all" || state.selectedMember === "mom";
+      head.style.display = canSee ? "" : "none";
+      list.style.display = canSee ? "" : "none";
+      if (!canSee) return;
+      list.innerHTML = "";
+      if (!state.feedbacks.length) {
+        list.innerHTML = `<div class="empty">这里是只给妈妈看的反馈。</div>`;
+        return;
+      }
+      state.feedbacks.slice(0, 8).forEach(feedback => {
+        const item = document.createElement("div");
+        item.className = "feedback";
+        item.textContent = `${feedback.time}  ${memberById(feedback.from).name}：${feedback.text}`;
+        list.appendChild(item);
+      });
+    }
+
+    function renderFilters() {
+      document.querySelectorAll(".chip").forEach(button => {
+        if (button.dataset.range) {
+          button.classList.toggle("active", button.dataset.range === state.rangeMode);
+        }
+        if (button.dataset.filter) {
+          button.classList.toggle("active", button.dataset.filter === state.filter);
+        }
+        if (button.dataset.view) {
+          button.classList.toggle("active", button.dataset.view === state.viewMode);
+        }
+      });
+      document.querySelectorAll("[data-lang]").forEach(button => {
+        button.classList.toggle("active", button.dataset.lang === appLanguage);
+      });
+    }
+
+    function render() {
+      try {
+        document.getElementById("todayText").textContent = selectedDateText();
+        document.getElementById("currentDateInput").value = state.selectedDate;
+        renderMembers();
+        renderFilters();
+        renderComposerContext();
+        renderActionTabs();
+        renderRoutines();
+        renderTasks();
+        renderSummary();
+        renderMomDashboard();
+        renderNotices();
+        renderPrivateFeedback();
+        renderNaturalContext();
+      } catch (error) {
+        const list = document.getElementById("taskList");
+        if (list) {
+          list.innerHTML = `<div class="empty">页面显示遇到问题：${error.message}</div>`;
+        }
+        throw error;
+      }
+    }
+
+    document.getElementById("currentDateInput").value = state.selectedDate;
+    renderAssignees();
+    renderLocations();
+    render();
+
+    document.getElementById("currentDateInput").addEventListener("change", event => {
+      state.selectedDate = event.target.value || todayISO();
+      document.getElementById("scheduleDate").value = state.selectedDate;
+      render();
+      checkPrepReminders();
+    });
+
+    document.getElementById("prevDateBtn").addEventListener("click", () => {
+      state.selectedDate = addDays(state.selectedDate, -1);
+      document.getElementById("scheduleDate").value = state.selectedDate;
+      render();
+      checkPrepReminders();
+    });
+
+    document.getElementById("nextDateBtn").addEventListener("click", () => {
+      state.selectedDate = addDays(state.selectedDate, 1);
+      document.getElementById("scheduleDate").value = state.selectedDate;
+      render();
+      checkPrepReminders();
+    });
+
+    document.querySelectorAll("[data-lang]").forEach(button => {
+      button.addEventListener("click", () => {
+        appLanguage = button.dataset.lang;
+        render();
+      });
+    });
+
+    document.getElementById("naturalForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const text = document.getElementById("naturalText").value.trim();
+      if (!text) return;
+      parseNaturalRequest(text, currentSpeakerId());
+      document.getElementById("naturalText").value = "";
+      save();
+      render();
+    });
+
+    document.getElementById("linkedScheduleForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const title = document.getElementById("scheduleTitle").value.trim();
+      if (!title) return;
+      addLinkedSchedule({
+        personId: document.getElementById("schedulePerson").value,
+        title,
+        time: document.getElementById("scheduleTime").value || "09:00",
+        location: document.getElementById("scheduleLocation").value,
+        rideMode: document.getElementById("scheduleRide").value,
+        companionId: document.getElementById("scheduleCompanion").value,
+        driverId: document.getElementById("scheduleDriver").value,
+        date: document.getElementById("scheduleDate").value || state.selectedDate
+      });
+      document.getElementById("scheduleTitle").value = "";
+      save();
+      render();
+    });
+
+    document.getElementById("feedbackForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const text = document.getElementById("feedbackText").value.trim();
+      if (!text) return;
+      addFeedback(currentSpeakerId(), text);
+      document.getElementById("feedbackText").value = "";
+      save();
+      render();
+    });
+
+    document.getElementById("routineForm").addEventListener("submit", event => {
+      event.preventDefault();
+      if (state.selectedMember === "all") return;
+      const title = document.getElementById("routineName").value.trim();
+      if (!title) return;
+      const location = document.getElementById("routineLocation").value;
+      const routine = {
+        title,
+        time: document.getElementById("routineTime").value || "09:00",
+        location,
+        prep: document.getElementById("routinePrep").value.trim() || suggestPrep(title, location)
+      };
+      if (!dailyRoutines[state.selectedMember]) {
+        dailyRoutines[state.selectedMember] = [];
+      }
+      if (state.editingRoutineIndex === null) {
+        dailyRoutines[state.selectedMember].push(routine);
+      } else {
+        dailyRoutines[state.selectedMember][state.editingRoutineIndex] = routine;
+      }
+      resetRoutineForm();
+      save();
+      render();
+    });
+
+    document.getElementById("routineName").addEventListener("input", () => {
+      const title = document.getElementById("routineName").value.trim();
+      const location = document.getElementById("routineLocation").value;
+      const prep = document.getElementById("routinePrep");
+      if (!prep.value.trim() && title) {
+        prep.placeholder = suggestPrep(title, location);
+      }
+    });
+
+    document.getElementById("routineLocation").addEventListener("change", () => {
+      const title = document.getElementById("routineName").value.trim();
+      const prep = document.getElementById("routinePrep");
+      if (!prep.value.trim() && title) {
+        prep.placeholder = suggestPrep(title, document.getElementById("routineLocation").value);
+      }
+    });
+
+    document.getElementById("generateAllBtn").addEventListener("click", generateAllRoutines);
+
+    document.getElementById("showFeedbackBtn").addEventListener("click", () => {
+      state.selectedMember = "mom";
+      state.actionMode = "natural";
+      render();
+      document.getElementById("privateFeedbackHead").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("markFeedbackReadBtn").addEventListener("click", () => {
+      state.feedbackReadAt = Date.now();
+      save();
+      render();
+    });
+
+    document.getElementById("actionTabs").addEventListener("click", event => {
+      const button = event.target.closest("button[data-action-mode]");
+      if (!button) return;
+      state.actionMode = button.dataset.actionMode;
+      render();
+    });
+
+    document.getElementById("filters").addEventListener("click", event => {
+      const button = event.target.closest("button[data-filter], button[data-view], button[data-range]");
+      if (!button) return;
+      if (button.dataset.range) state.rangeMode = button.dataset.range;
+      if (button.dataset.filter) state.filter = button.dataset.filter;
+      if (button.dataset.view) state.viewMode = button.dataset.view;
+      render();
+    });
+
+    checkPrepReminders();
+    setInterval(checkPrepReminders, 60000);
+  </script>
+</body>
+</html>
+
