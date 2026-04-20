@@ -58,6 +58,7 @@
     }
 
     .topbar {
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -131,7 +132,7 @@
       align-items: center;
       justify-content: flex-end;
       gap: 10px;
-      margin-top: 8px;
+      margin-top: 0;
     }
 
     .identity-pill {
@@ -1172,13 +1173,17 @@
       }
 
       .topbar {
-        display: block;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 104px;
+        align-items: start;
+        column-gap: 10px;
         padding: 6px 0 12px;
       }
 
       .brand h1 {
         font-size: 22px;
         line-height: 1.2;
+        padding-right: 0;
       }
 
       .brand p {
@@ -1186,12 +1191,28 @@
       }
 
       .identity-bar {
-        justify-content: flex-start;
+        position: fixed;
+        left: calc(100vw - 220px);
+        top: 12px;
+        z-index: 25;
+        width: 104px;
+        justify-content: flex-end;
+      }
+
+      .identity-pill {
+        width: 100%;
+        min-height: 30px;
+        padding: 0 9px;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .date-pill {
+        grid-column: 1 / -1;
         width: 228px;
-        margin-top: 8px;
+        margin-top: 12px;
         display: grid;
         grid-template-columns: 28px minmax(0, 1fr) 28px;
         justify-content: stretch;
@@ -1591,9 +1612,9 @@
       <div class="brand">
         <h1>我们家的小助手</h1>
         <p>家里今天要做的事，一眼就看明白。</p>
-        <div class="identity-bar">
-          <button class="identity-pill" type="button" id="switchUserBtn">当前身份：未确认</button>
-        </div>
+      </div>
+      <div class="identity-bar">
+        <button class="identity-pill" type="button" id="switchUserBtn">当前身份：未确认</button>
       </div>
       <div class="date-pill" aria-label="今天日期">
         <button class="date-button" type="button" id="prevDateBtn">‹</button>
@@ -2249,6 +2270,12 @@
       return isManagerUser() || task.assignee === state.currentUser;
     }
 
+    function visibleMemberIdsForCurrentUser() {
+      if (isManagerUser()) return members.map(member => member.id);
+      if (state.currentUser === "kk") return ["kk", "daughter1", "daughter2", "son"];
+      return [state.currentUser];
+    }
+
     function followUpText(id) {
       if (!id || id === "none") return appLanguage === "en" ? "None" : "无";
       return String(id)
@@ -2356,7 +2383,7 @@
     function visibleTasks() {
       return state.tasks
         .filter(task => dateInRange(task.date || todayISO()))
-        .filter(task => isManagerUser() || task.assignee === state.currentUser)
+        .filter(task => visibleMemberIdsForCurrentUser().includes(task.assignee) || state.selectedMember === "all" && isManagerUser())
         .filter(task => state.selectedMember === "all" || task.assignee === state.selectedMember)
         .filter(task => {
           if (state.filter === "all") return true;
@@ -2374,7 +2401,7 @@
       sheetList.innerHTML = "";
       const visibleMembers = isManagerUser()
         ? members
-        : members.filter(member => member.id === state.currentUser);
+        : members.filter(member => visibleMemberIdsForCurrentUser().includes(member.id));
       visibleMembers.forEach(member => {
         const tasks = member.id === "all"
           ? state.tasks.filter(task => dateInRange(task.date || todayISO()))
@@ -4133,12 +4160,13 @@
     function renderIdentity() {
       const user = state.currentUser ? currentUser() : null;
       document.getElementById("switchUserBtn").textContent = user
-        ? `当前身份：${user.name}${isManagerUser() ? " · 管理" : ""}`
-        : "当前身份：未确认";
+        ? `身份：${user.name}${isManagerUser() ? " 管理" : ""}`
+        : "身份：未确认";
       document.getElementById("authSheet").hidden = Boolean(state.currentUser);
       if (!state.currentUser) return;
       if (!isManagerUser()) {
-        state.selectedMember = state.currentUser;
+        const allowed = visibleMemberIdsForCurrentUser();
+        if (!allowed.includes(state.selectedMember)) state.selectedMember = state.currentUser;
       }
     }
 
