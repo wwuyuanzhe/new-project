@@ -557,6 +557,60 @@
       transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
     }
 
+    .task-group {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid rgba(18, 24, 31, 0.09);
+      box-shadow: var(--small-shadow), var(--glow);
+    }
+
+    .task-group-head {
+      display: grid;
+      gap: 6px;
+    }
+
+    .task-group-head h3 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.35;
+      font-weight: 850;
+      overflow-wrap: anywhere;
+    }
+
+    .relation-strip {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+
+    .relation-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .relation-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 8px;
+      background: rgba(247, 248, 250, 0.9);
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .task-group .task {
+      box-shadow: none;
+      background: rgba(255, 255, 255, 0.78);
+    }
+
     .task:hover {
       transform: translateY(-1px);
       box-shadow: 0 16px 36px rgba(22, 28, 35, 0.12), var(--glow);
@@ -795,6 +849,47 @@
       flex-wrap: wrap;
     }
 
+    .worker-today {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .worker-now {
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 122, 255, 0.18);
+      background: rgba(235, 245, 255, 0.78);
+      box-shadow: var(--small-shadow), var(--glow);
+      display: grid;
+      gap: 10px;
+    }
+
+    .worker-now h3 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.35;
+    }
+
+    .worker-next {
+      padding: 13px;
+      border-radius: 8px;
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      background: rgba(255, 255, 255, 0.72);
+      display: grid;
+      gap: 7px;
+    }
+
+    .worker-mini-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .layout.simple-worker-mode .main {
+      order: -1;
+    }
+
     .notice {
       border-radius: 8px;
       padding: 12px;
@@ -925,8 +1020,9 @@
         display: grid;
         grid-template-columns: 36px minmax(0, 1fr) 36px;
         justify-content: stretch;
-        min-height: 44px;
-        padding: 10px 12px;
+        min-height: 38px;
+        padding: 8px;
+        gap: 7px;
         white-space: normal;
       }
 
@@ -967,11 +1063,18 @@
 
       .date-pill .chip {
         width: 100%;
+        min-height: 34px;
       }
 
       .date-input {
         width: 100%;
         min-width: 0;
+        min-height: 38px;
+      }
+
+      .date-button {
+        width: 32px;
+        height: 32px;
       }
 
       .layout {
@@ -1002,7 +1105,7 @@
       }
 
       .member-list {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         max-height: none;
         padding: 10px;
         gap: 8px;
@@ -1010,10 +1113,27 @@
       }
 
       .member-button {
-        grid-template-columns: 34px minmax(0, 1fr);
-        min-height: 64px;
-        padding: 9px;
+        grid-template-columns: 32px minmax(0, 1fr);
+        min-height: 54px;
+        padding: 8px;
         background: rgba(255, 255, 255, 0.62);
+      }
+
+      .member-button .avatar {
+        width: 32px;
+        height: 32px;
+      }
+
+      .member-role,
+      .manager-mark {
+        display: none;
+      }
+
+      .member-name {
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .member-button .count {
@@ -1146,6 +1266,19 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+      .task-group {
+        padding: 10px;
+        gap: 8px;
+      }
+
+      .task-group .task {
+        padding: 11px;
+      }
+
+      .task-group .prep-line {
+        display: none;
+      }
+
       .progress-row {
         grid-template-columns: 68px 1fr 42px;
       }
@@ -1183,6 +1316,13 @@
       </aside>
 
       <main class="main">
+        <section class="panel" id="workerTodayPanel" hidden>
+          <div class="panel-head">
+            <h2 id="workerTodayTitle">我的今天</h2>
+          </div>
+          <div class="worker-today" id="workerTodayContent"></div>
+        </section>
+
         <section class="panel" id="quickPanel">
           <div class="panel-head">
             <h2 id="quickPanelTitle">快速处理</h2>
@@ -1241,18 +1381,20 @@
                 </select>
               </div>
               <div class="field">
-                <label for="scheduleCompanion">陪同人</label>
+                <label for="scheduleCompanion">执行人</label>
                 <select id="scheduleCompanion">
-                  <option value="none">不需要陪同</option>
+                  <option value="none">不指定执行人</option>
                   <option value="helperA">菲律宾佣人 A</option>
                   <option value="helperB">菲律宾佣人 B</option>
                   <option value="helperC">菲律宾佣人 C</option>
+                  <option value="driver">管家陈先生</option>
+                  <option value="driverLei">司机阿磊</option>
                   <option value="kk">家庭教师 KK</option>
                 </select>
               </div>
             <button class="primary" type="submit">保存日程/事项</button>
           </form>
-            <div class="helper-text">如果不选接送、不选陪同，就是单独日程；如果选择接送或陪同，小助手会自动生成本人、接送人和陪同人的事项。</div>
+            <div class="helper-text">如果不选接送、不指定执行人，就是单独日程；如果选择接送或执行人，小助手会自动生成本人、接送人和执行人的事项。</div>
           </div>
           <div class="action-pane" id="feedbackPanel" hidden>
             <form class="quick-form" id="feedbackForm">
@@ -1303,8 +1445,6 @@
             <button class="chip" type="button" data-range="week">本周</button>
             <button class="chip active" type="button" data-filter="all">全部</button>
             <button class="chip" type="button" data-filter="todo">未完成</button>
-            <button class="chip" type="button" data-filter="urgent">加急</button>
-            <button class="chip" type="button" data-filter="issue">有问题</button>
             <button class="chip" type="button" data-filter="done">已完成</button>
             <button class="chip active" type="button" data-view="list">列表</button>
             <button class="chip" type="button" data-view="visual">可视图</button>
@@ -1325,9 +1465,9 @@
               <span class="dashboard-note" id="latestFeedbackText">暂无新的私密反馈</span>
             </div>
             <div class="dashboard-card alert">
-              <span class="dashboard-label">今天异常提醒</span>
+              <span class="dashboard-label">今天反馈提醒</span>
               <b class="dashboard-number" id="todayIssueCount">0</b>
-              <span class="dashboard-note" id="todayIssueText">今天没有异常事项</span>
+              <span class="dashboard-note" id="todayIssueText">暂无新的事项反馈</span>
             </div>
             <div class="dashboard-card">
               <span class="dashboard-label">今天未完成</span>
@@ -1357,7 +1497,7 @@
             </div>
             <div class="stat">
               <b id="urgentCount">0</b>
-              <span>加急中</span>
+              <span>反馈未读</span>
             </div>
             <div class="stat">
               <b id="doingCount">0</b>
@@ -1365,7 +1505,7 @@
             </div>
             <div class="stat">
               <b id="issueCount">0</b>
-              <span>有问题</span>
+              <span>未完成</span>
             </div>
           </div>
           <div class="person-progress" id="progressList"></div>
@@ -1443,10 +1583,10 @@
 
     const starterTasks = [
       { id: uid(), title: "准备早餐和孩子水壶", assignee: "chef", location: "floor1-kitchen", time: "07:00", status: "done", urgent: false },
-      { id: uid(), title: "安排 Aron 去兴趣班", assignee: "driver", location: "outdoor-parking", time: "08:20", status: "doing", urgent: true },
+      { id: uid(), title: "安排 Aron 去兴趣班", assignee: "driver", location: "outdoor-parking", time: "08:20", status: "doing", urgent: false },
       { id: uid(), title: "大客厅和餐厅整理", assignee: "helperA", location: "floor1-living", time: "10:00", status: "todo", urgent: false },
       { id: uid(), title: "陪 Alisa 完成英文阅读", assignee: "kk", location: "floor2-alisa-bedroom", time: "16:30", status: "todo", urgent: false },
-      { id: uid(), title: "检查姥姥今天的药", assignee: "helperB", location: "floor2-grandparents-bedroom", time: "19:00", status: "issue", urgent: false }
+      { id: uid(), title: "检查姥姥今天的药", assignee: "helperB", location: "floor2-grandparents-bedroom", time: "19:00", status: "todo", urgent: false }
     ];
 
     const defaultDailyRoutines = {
@@ -1546,9 +1686,14 @@
         return {
           ...task,
           title: match ? match[1] : task.title,
+          status: task.status === "issue" ? "todo" : task.status,
+          urgent: false,
           date: task.date || todayISO(),
           location: task.location || "none",
           followUp: task.followUp || inferFollowUp(task),
+          groupId: task.groupId || "",
+          groupTitle: task.groupTitle || "",
+          relationLabel: task.relationLabel || "",
           prep: task.prep || suggestPrep(match ? match[1] : task.title, task.location || "none"),
           prepReminderSent: task.prepReminderSent || false
         };
@@ -1624,7 +1769,7 @@
 
     function save() {
       localStorage.setItem("familyTasks", JSON.stringify(state.tasks));
-      localStorage.setItem("familyNotices", JSON.stringify(state.notices.slice(0, 8)));
+      localStorage.setItem("familyNotices", JSON.stringify(state.notices.slice(0, 30)));
       localStorage.setItem("familyRoutines", JSON.stringify(dailyRoutines));
       localStorage.setItem("familyFeedbacks", JSON.stringify(state.feedbacks.slice(0, 30)));
       localStorage.setItem("familyFeedbackReadAt", String(state.feedbackReadAt || 0));
@@ -1799,6 +1944,7 @@
           state.selectedMember = member.id;
           resetRoutineForm();
           render();
+          if (isSimpleWorker(member.id)) window.scrollTo({ top: 0, behavior: "smooth" });
         });
         list.appendChild(button);
       });
@@ -1887,6 +2033,19 @@
       document.getElementById("naturalPanel").hidden = state.actionMode !== "natural";
       document.getElementById("linkedSchedulePanel").hidden = state.actionMode !== "schedule";
       document.getElementById("feedbackPanel").hidden = state.actionMode !== "feedback" || speaker === "mom";
+    }
+
+    function isSimpleWorker(memberId) {
+      return ["helperA", "helperB", "helperC", "chef", "driverLei"].includes(memberId);
+    }
+
+    function applySimpleWorkerLayout() {
+      const simple = isSimpleWorker(state.selectedMember);
+      document.querySelector(".layout").classList.toggle("simple-worker-mode", simple);
+      document.getElementById("workerTodayPanel").hidden = !simple;
+      document.getElementById("quickPanel").style.display = simple ? "none" : "";
+      document.getElementById("routinePanel").style.display = simple ? "none" : "";
+      document.querySelector(".right").style.display = simple ? "none" : "";
     }
 
     function renderRoutines() {
@@ -2035,7 +2194,7 @@
       });
     }
 
-    function createTask({ title, assignee, location = "none", time = "09:00", prep, followUp = "none", date = state.selectedDate }) {
+    function createTask({ title, assignee, location = "none", time = "09:00", prep, followUp = "none", date = state.selectedDate, groupId = "", groupTitle = "", relationLabel = "" }) {
       state.filter = "all";
       state.tasks.push({
         id: uid(),
@@ -2045,6 +2204,9 @@
         location,
         time,
         followUp,
+        groupId,
+        groupTitle,
+        relationLabel,
         prep: prep || suggestPrep(title, location),
         prepReminderSent: false,
         status: "todo",
@@ -2079,14 +2241,31 @@
         const time = extractTime(clean) || (/晚|晚上|晚餐/.test(clean) ? "17:30" : /早|早上|早餐|早饭/.test(clean) ? "07:00" : "11:30");
         const meal = inferMealName(clean, time);
         const eater = memberById(personId);
+        const explicitPerson = detectPersonMention(clean);
         repeatDatesForRequest(clean).forEach(date => {
+          const groupId = explicitPerson ? uid() : "";
+          const groupTitle = explicitPerson ? `${eater.name}${meal}特殊要求` : "";
+          if (!explicitPerson) {
+            tasks.push({
+              title: `准备全家${meal}：${clean}`,
+              assignee: "chef",
+              date,
+              location: "floor1-kitchen",
+              time,
+              prep: "确认全家人数、食材、过敏忌口和出餐时间。"
+            });
+            return;
+          }
           tasks.push({
             title: `${eater.name}${meal}：${clean}`,
             assignee: personId,
             date,
             location: "none",
             time,
-            followUp: "driver",
+            followUp: "chef",
+            groupId,
+            groupTitle,
+            relationLabel: `${eater.name}需求`,
             prep: "到时间前确认自己是否还需要这个安排，有变化就告诉妈妈或管家陈先生。"
           });
           tasks.push({
@@ -2095,15 +2274,10 @@
             date,
             location: "floor1-kitchen",
             time,
+            groupId,
+            groupTitle,
+            relationLabel: "齐厨师准备",
             prep: "确认食材、过敏忌口、餐具和送达时间，准备好后反馈给妈妈或管家陈先生。"
-          });
-          tasks.push({
-            title: `跟进${eater.name}的${meal}需求：${clean}`,
-            assignee: "driver",
-            date,
-            location: "none",
-            time: timeToMinutes(time) > 30 ? minutesToTime(timeToMinutes(time) - 30) : time,
-            prep: "确认齐厨师已收到需求，必要时提醒妈妈，并确认孩子是否按时拿到。"
           });
         });
       } else if (isScheduleRequest(clean)) {
@@ -2191,7 +2365,7 @@
     }
 
     function childMentionPrefix(text) {
-      const match = text.match(/^(angela|alisa|aron|安安|李馨逸|玥|月月|玥玥|李馨玥|康康|李兴睿|大女儿|二女儿|小儿子|妈妈|张老师|张辉|爸爸)/i);
+      const match = text.match(/^(angela|alisa|aron|安安|李馨逸|玥|月月|玥玥|李馨玥|康康|李兴睿|大女儿|二女儿|小儿子|妈妈|张老师|张辉|爸爸|姥姥|姥爷|外婆|外公)/i);
       return match ? match[0] : "";
     }
 
@@ -2201,13 +2375,9 @@
     }
 
     function splitCompoundRequest(text) {
-      const hasFood = /吃|喝|吃饭|面包|酸奶|牛奶|水果|早饭|早餐|午饭|午餐|晚饭|晚餐/.test(text);
-      const hasActivity = /兴趣班|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|围棋|上课|课外|培训/.test(text);
-      if (!hasFood || !hasActivity) return [text];
-
       const subject = childMentionPrefix(text);
       const repeat = repeatTextPrefix(text);
-      const timePattern = "(?:早上|上午|中午|下午|晚上)?\\s*(?:\\d{1,2}|[一二两三四五六七八九十]{1,3})(?:[:：]\\d{2}|点半?|点)?";
+      const timePattern = "(?:早上|上午|中午|下午|晚上)?\\s*(?:\\d{1,2}(?:[:：]\\d{2}|点半?|点)|[一二两三四五六七八九十]{1,3}点半?)";
       const timeRegex = new RegExp(timePattern, "g");
       const timeMatches = [...text.matchAll(timeRegex)].filter(match => match[0].trim());
       const withContext = part => {
@@ -2222,22 +2392,50 @@
             .slice(match.index, next ? next.index : text.length)
             .replace(/^[，,。；;\s]+|[，,。；;\s]+$/g, "")
             .trim();
-        }).filter(part => /吃|喝|吃饭|面包|酸奶|牛奶|水果|早饭|早餐|午饭|午餐|晚饭|晚餐|兴趣班|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|围棋|上课|课外|培训/.test(part));
+        }).filter(part => isRecognizableClause(part));
         if (clauses.length > 1) return clauses.map(withContext);
       }
 
       const mealPattern = new RegExp(`${timePattern}\\s*(?:起床)?(?:吃)?(?:饭|早饭|早餐|午饭|午餐|晚饭|晚餐|面包|酸奶|牛奶|水果)`);
-      const activityPattern = new RegExp(`${timePattern}\\s*(?:围棋课|围棋|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|兴趣班|上课|培训)`);
+      const activityPattern = new RegExp(`${timePattern}\\s*(?:睡觉|起床|散步|按摩|围棋课|围棋|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|兴趣班|上课|培训)`);
       const mealMatch = text.match(mealPattern);
       const activityMatch = text.match(activityPattern);
       if (!mealMatch || !activityMatch || mealMatch[0] === activityMatch[0]) return [text];
       return [withContext(mealMatch[0]), withContext(activityMatch[0])];
     }
 
+    function isRecognizableClause(text) {
+      return /吃|喝|吃饭|面包|酸奶|牛奶|水果|早饭|早餐|午饭|午餐|晚饭|晚餐|睡觉|起床|散步|按摩|兴趣班|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|围棋|上课|课外|培训/.test(text);
+    }
+
+    function isScheduleRequest(text) {
+      return /睡觉|起床|散步|按摩|兴趣班|音乐课|钢琴|舞蹈|游泳|网球|高尔夫|篮球|打球|围棋|上课|课外|培训/.test(text);
+    }
+
+    function hasCompanionMention(text) {
+      return /执行人|陪同|陪|跟进|陈先生|管家|阿磊|司机|kk|KK|佣人A|佣人B|佣人C|helper/i.test(text);
+    }
+
+    function defaultCompanionForSchedule(text) {
+      if (/睡觉|起床|散步|按摩/.test(text)) return "none";
+      return "helperA";
+    }
+
+    function inferRideMode(text) {
+      if (/不接送|不用接送|不需要接送|睡觉|起床|散步|按摩/.test(text)) return "no";
+      return "yes";
+    }
+
     function detectPersonId(text, fallbackId) {
       if (/妈妈|张老师|张辉/.test(text)) return "mom";
       if (/爸爸/.test(text)) return "dad";
+      if (/姥姥|外婆/.test(text)) return "grandma";
+      if (/姥爷|外公/.test(text)) return "grandpa";
       return detectChildId(text, fallbackId);
+    }
+
+    function detectPersonMention(text) {
+      return /妈妈|张老师|张辉|爸爸|姥姥|外婆|姥爷|外公|angela|安安|李馨逸|alisa|玥|月月|玥玥|李馨玥|aron|康康|李兴睿|大女儿|二女儿|小儿子/i.test(text);
     }
 
     function detectChildId(text, fallbackId) {
@@ -2248,7 +2446,10 @@
     }
 
     function detectCompanion(text) {
+      if (/陈先生|管家/.test(text)) return "driver";
+      if (/阿磊|司机/.test(text)) return "driverLei";
       if (/kk|KK|老师|家庭教师/i.test(text)) return "kk";
+      if (/佣人A|helper a|helperA|A陪|a陪/i.test(text)) return "helperA";
       if (/佣人B|helper b|helperB|B陪|b陪/i.test(text)) return "helperB";
       if (/佣人C|helper c|helperC|C陪|c陪/i.test(text)) return "helperC";
       if (/不陪|不用陪|不需要陪/i.test(text)) return "none";
@@ -2281,10 +2482,10 @@
         if (/下午|晚上/.test(text) && hour < 12) hour += 12;
         return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
       }
-      const match = text.match(/(\d{1,2})[:点：]?(\d{2})?/);
+      const match = text.match(/(?:早上|上午|中午|下午|晚上)?\s*(\d{1,2})(?:[:：](\d{2})|点(半)?)/);
       if (!match) return "";
       let hour = Number(match[1]);
-      const minute = Number(match[2] || 0);
+      const minute = match[3] ? 30 : Number(match[2] || 0);
       if (/下午|晚上/.test(text) && hour < 12) hour += 12;
       return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
     }
@@ -2299,6 +2500,13 @@
       if (/高尔夫/.test(text)) return "高尔夫课";
       if (/篮球|打球/.test(text)) return "篮球课";
       if (/围棋/.test(text)) return "围棋课";
+      if (/睡觉/.test(text)) return "睡觉";
+      if (/起床/.test(text)) return "起床";
+      if (/按摩/.test(text)) return "按摩";
+      if (/散步/.test(text)) {
+        const duration = text.match(/散步\s*(\d+|[一二两三四五六七八九十两]+)\s*小时/);
+        return duration ? `散步${duration[1]}小时` : "散步";
+      }
       return text.length > 18 ? `${text.slice(0, 18)}...` : text;
     }
 
@@ -2317,6 +2525,8 @@
       const driver = memberById(driverId);
       const personIsDriver = personId === "driver" || personId === "driverLei";
       const start = timeToMinutes(time);
+      const groupId = uid();
+      const groupTitle = `${person.name} ${title}`;
       const mainTitle = `${person.name}：${title}`;
       createTask({
         title: mainTitle,
@@ -2324,6 +2534,9 @@
         date,
         location,
         time,
+        groupId,
+        groupTitle,
+        relationLabel: `${person.name}本人`,
         followUp: companionId !== "none" && personId !== "mom" && !personIsDriver
           ? companionId
           : rideMode !== "no"
@@ -2368,25 +2581,34 @@
         ...task,
         assignee: driverId,
         date,
+        groupId,
+        groupTitle,
+        relationLabel: `${driver.name}接送`,
         location: location === "none" ? "outdoor-parking" : location
       }));
 
       const companionTasks = [];
       if (companionId !== "none" && personId !== "mom" && !personIsDriver) {
         companionTasks.push({
-          title: `陪同${person.name}去${title}`,
+          title: `执行/跟进${person.name}：${title}`,
           assignee: companionId,
           date,
           location,
           time: minutesToTime(clampDayMinutes(start - 25)),
-          prep: `准备陪同${person.name}需要的包、水杯、课程用品和联系手机，提前与${driver.name}确认上车时间。`
+          groupId,
+          groupTitle,
+          relationLabel: `${memberById(companionId).name}执行`,
+          prep: `确认${person.name}的时间、地点、随身物品和联系手机，需要接送时提前与${driver.name}确认。`
         });
         companionTasks.push({
-          title: `陪同${person.name}完成${title}并反馈`,
+          title: `完成${person.name}的${title}并反馈`,
           assignee: companionId,
           date,
           location,
           time,
+          groupId,
+          groupTitle,
+          relationLabel: `${memberById(companionId).name}反馈`,
           prep: "确认孩子安全进入活动地点，结束后把情况反馈给妈妈或管家陈先生。"
         });
       }
@@ -2437,7 +2659,43 @@
         return;
       }
 
+      renderTaskItems(list, tasks);
+    }
+
+    function renderTaskItems(list, tasks) {
+      const renderedGroups = new Set();
       tasks.forEach(task => {
+        if (state.selectedMember === "all" && task.groupId) {
+          if (renderedGroups.has(task.groupId)) return;
+          renderedGroups.add(task.groupId);
+          const groupTasks = tasks.filter(item => item.groupId === task.groupId);
+          list.appendChild(createTaskGroup(groupTasks));
+          return;
+        }
+        list.appendChild(createTaskCard(task));
+      });
+    }
+
+    function createTaskGroup(groupTasks) {
+      const group = document.createElement("section");
+      group.className = "task-group";
+      const sorted = [...groupTasks].sort((a, b) => a.time.localeCompare(b.time));
+      const first = sorted[0];
+      const relations = sorted.map(task => {
+        const label = task.relationLabel || memberById(task.assignee).name;
+        return `<span class="relation-chip">${label} · ${task.time}</span>`;
+      }).join("");
+      group.innerHTML = `
+        <div class="task-group-head">
+          <h3>${first.groupTitle || first.title}</h3>
+          <div class="relation-strip">${relations}</div>
+        </div>
+      `;
+      sorted.forEach(task => group.appendChild(createTaskCard(task)));
+      return group;
+    }
+
+    function createTaskCard(task) {
         const assignee = memberById(task.assignee);
         const prep = task.prep || suggestPrep(task.title, task.location);
         const locationBadge = task.location && task.location !== "none"
@@ -2459,8 +2717,6 @@
                 <span class="badge">${assignee.name}</span>
                 ${locationBadge}
                 ${followUpBadge}
-                ${task.urgent ? `<span class="badge urgent">${appLanguage === "en" ? "Urgent" : "加急中"}</span>` : ""}
-                ${task.status === "issue" ? `<span class="badge issue">${appLanguage === "en" ? "Needs attention" : "需要妈妈看一下"}</span>` : ""}
               </div>
             </div>
             <span class="badge status ${task.status === "done" ? "done" : ""}">${statusText(task.status)}</span>
@@ -2469,15 +2725,62 @@
           <div class="task-actions">
             <button class="action" type="button" data-action="doing">${appLanguage === "en" ? "Start" : "开始"}</button>
             <button class="action" type="button" data-action="done">${appLanguage === "en" ? "Done" : "完成"}</button>
-            <button class="action warn" type="button" data-action="issue">${task.status === "issue" ? (appLanguage === "en" ? "Resolved" : "没问题了") : (appLanguage === "en" ? "Issue" : "有问题")}</button>
-            <button class="action danger" type="button" data-action="urgent">${task.urgent ? (appLanguage === "en" ? "Cancel urgent" : "取消加急") : (appLanguage === "en" ? "Urgent" : "加急")}</button>
+            <button class="action warn" type="button" data-action="feedback">${appLanguage === "en" ? "Feedback" : "内容反馈"}</button>
             <button class="action" type="button" data-action="delete">${appLanguage === "en" ? "Delete" : "删除"}</button>
           </div>
         `;
         card.querySelectorAll("button").forEach(button => {
           button.addEventListener("click", () => updateTask(task.id, button.dataset.action));
         });
-        list.appendChild(card);
+        return card;
+    }
+
+    function renderWorkerToday() {
+      const panel = document.getElementById("workerTodayPanel");
+      if (!isSimpleWorker(state.selectedMember)) {
+        panel.hidden = true;
+        return;
+      }
+      panel.hidden = false;
+      const member = memberById(state.selectedMember);
+      const content = document.getElementById("workerTodayContent");
+      document.getElementById("workerTodayTitle").textContent = `${member.name}的今天`;
+      const tasks = state.tasks
+        .filter(task => task.assignee === state.selectedMember && (task.date || todayISO()) === state.selectedDate)
+        .filter(task => task.status !== "done")
+        .sort((a, b) => a.time.localeCompare(b.time));
+      const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+      const current = tasks.find(task => timeToMinutes(task.time || "09:00") <= nowMinutes) || tasks[0];
+      const next = tasks.find(task => current && task.id !== current.id && timeToMinutes(task.time || "09:00") >= timeToMinutes(current.time || "09:00"));
+
+      if (!current) {
+        content.innerHTML = `<div class="empty">今天暂时没有需要处理的事项。</div>`;
+        return;
+      }
+
+      content.innerHTML = `
+        <div class="worker-now">
+          <span class="worker-mini-label">现在要做</span>
+          <h3>${current.time} · ${current.title}</h3>
+          <div class="task-meta">
+            <span class="badge">${locationById(current.location)}</span>
+            <span class="badge">${statusText(current.status)}</span>
+          </div>
+          <div class="prep-line">准备：${current.prep || suggestPrep(current.title, current.location)}</div>
+          <div class="task-actions">
+            <button class="action" type="button" data-worker-action="done" data-task-id="${current.id}">完成</button>
+            <button class="action warn" type="button" data-worker-action="feedback" data-task-id="${current.id}">内容反馈</button>
+          </div>
+        </div>
+        <div class="worker-next">
+          <span class="worker-mini-label">下一个</span>
+          <strong>${next ? `${next.time} · ${next.title}` : "今天后面暂无事项"}</strong>
+          ${next ? `<span class="dashboard-note">${locationById(next.location)} · ${next.prep || suggestPrep(next.title, next.location)}</span>` : ""}
+        </div>
+      `;
+
+      content.querySelectorAll("[data-worker-action]").forEach(button => {
+        button.addEventListener("click", () => updateTask(button.dataset.taskId, button.dataset.workerAction));
       });
     }
 
@@ -2520,23 +2823,26 @@
     function updateTask(id, action) {
       const task = state.tasks.find(item => item.id === id);
       if (!task) return;
-      if (action === "issue") {
-        task.status = task.status === "issue" ? "todo" : "issue";
-      } else if (["todo", "doing", "done"].includes(action)) {
+      if (["todo", "doing", "done"].includes(action)) {
         task.status = action;
       }
-      if (action === "urgent") {
-        task.urgent = !task.urgent;
-        if (task.urgent) {
-          const assignee = memberById(task.assignee);
+      if (action === "feedback") {
+        const text = window.prompt(`请输入关于「${task.title}」的反馈内容`);
+        if (text && text.trim()) {
+          addFeedback(task.assignee, `关于「${task.title}」：${text.trim()}`);
           state.notices.unshift({
             id: uid(),
-            text: `${assignee.name} 收到加急事项：请优先处理「${task.title}」。准备：${task.prep || suggestPrep(task.title, task.location)}`,
+            text: `${memberById(task.assignee).name} 提交了事项反馈：「${task.title}」。`,
             time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
           });
         }
       }
       if (action === "delete") {
+        state.notices.unshift({
+          id: uid(),
+          text: `删除事项：${memberById(task.assignee).name} 的「${task.title}」。`,
+          time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+        });
         state.tasks = state.tasks.filter(item => item.id !== id);
       }
       save();
@@ -2546,9 +2852,9 @@
     function renderSummary() {
       const dateTasks = state.tasks.filter(task => dateInRange(task.date || todayISO()));
       document.getElementById("doneCount").textContent = dateTasks.filter(task => task.status === "done").length;
-      document.getElementById("urgentCount").textContent = dateTasks.filter(task => task.urgent).length;
+      document.getElementById("urgentCount").textContent = unreadFeedbacks().length;
       document.getElementById("doingCount").textContent = dateTasks.filter(task => task.status === "doing").length;
-      document.getElementById("issueCount").textContent = dateTasks.filter(task => task.status === "issue").length;
+      document.getElementById("issueCount").textContent = dateTasks.filter(task => task.status !== "done").length;
 
       const progress = document.getElementById("progressList");
       progress.innerHTML = "";
@@ -2589,7 +2895,7 @@
 
       const tasks = todayTasks();
       const openTasks = tasks.filter(task => task.status !== "done");
-      const issueTasks = tasks.filter(task => task.status === "issue" || task.urgent);
+      const todayFeedbacks = unreadFeedbacks();
       const now = new Date();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const upcoming = openTasks
@@ -2603,7 +2909,7 @@
       const latestFeedback = state.feedbacks[0];
 
       document.getElementById("unreadFeedbackCount").textContent = unread.length;
-      document.getElementById("todayIssueCount").textContent = issueTasks.length;
+      document.getElementById("todayIssueCount").textContent = todayFeedbacks.length;
       document.getElementById("todayOpenCount").textContent = openTasks.length;
       document.getElementById("upcomingCount").textContent = upcoming.length;
       dot.textContent = unread.length;
@@ -2612,9 +2918,9 @@
       document.getElementById("latestFeedbackText").textContent = latestFeedback
         ? `${memberById(latestFeedback.from).name}：${latestFeedback.text}`
         : "暂无新的私密反馈";
-      document.getElementById("todayIssueText").textContent = issueTasks.length
-        ? `${memberById(issueTasks[0].assignee).name}：${issueTasks[0].title}`
-        : "今天没有异常事项";
+      document.getElementById("todayIssueText").textContent = todayFeedbacks.length
+        ? `${memberById(todayFeedbacks[0].from).name}：${todayFeedbacks[0].text}`
+        : "暂无新的事项反馈";
       document.getElementById("todayBusyText").textContent = openTasks.length
         ? `${new Set(openTasks.map(task => task.assignee)).size} 个人今天还有事项`
         : "今天暂时没有待办";
@@ -2640,9 +2946,9 @@
           title: `${task.time} 马上开始：${task.title}`,
           value: memberById(task.assignee).name
         })),
-        ...issueTasks.slice(0, 2).map(task => ({
-          title: `${task.urgent ? "加急" : "异常"}：${task.title}`,
-          value: memberById(task.assignee).name
+        ...todayFeedbacks.slice(0, 2).map(feedback => ({
+          title: `反馈：${feedback.text}`,
+          value: memberById(feedback.from).name
         })),
         ...busyPeople.map(item => ({
           title: `${item.member.name} 今天有 ${item.total} 项`,
@@ -2666,9 +2972,9 @@
     function renderNotices() {
       const list = document.getElementById("noticeList");
       list.innerHTML = "";
-      const notices = state.notices.slice(0, 5);
+      const notices = state.notices.slice(0, 10);
       if (!notices.length) {
-        list.innerHTML = `<div class="empty">新事项、加急和准备提醒会出现在这里。</div>`;
+        list.innerHTML = `<div class="empty">新事项、准备提醒和反馈提示会出现在这里。</div>`;
         return;
       }
       notices.forEach(notice => {
@@ -2725,6 +3031,8 @@
         renderComposerContext();
         renderActionTabs();
         renderRoutines();
+        applySimpleWorkerLayout();
+        renderWorkerToday();
         renderTasks();
         renderSummary();
         renderMomDashboard();
