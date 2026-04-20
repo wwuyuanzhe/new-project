@@ -6,21 +6,21 @@
   <title>我们家的小助手</title>
   <style>
     :root {
-      --ink: #101418;
-      --muted: #6f7782;
-      --line: rgba(18, 24, 31, 0.1);
-      --soft: rgba(247, 248, 250, 0.78);
-      --paper: rgba(255, 255, 255, 0.82);
-      --green: #007aff;
-      --green-soft: rgba(0, 122, 255, 0.1);
+      --ink: #171717;
+      --muted: #6b6b6b;
+      --line: rgba(13, 13, 13, 0.1);
+      --soft: #f7f7f8;
+      --paper: #ffffff;
+      --green: #111111;
+      --green-soft: rgba(13, 13, 13, 0.06);
       --gold: #a15c00;
       --gold-soft: rgba(255, 184, 77, 0.18);
       --red: #d92d20;
       --red-soft: rgba(255, 59, 48, 0.12);
-      --blue: #007aff;
-      --blue-soft: rgba(0, 122, 255, 0.1);
-      --shadow: 0 22px 60px rgba(22, 28, 35, 0.12);
-      --small-shadow: 0 8px 24px rgba(22, 28, 35, 0.08);
+      --blue: #111111;
+      --blue-soft: rgba(13, 13, 13, 0.06);
+      --shadow: 0 12px 34px rgba(0, 0, 0, 0.06);
+      --small-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
       --glow: 0 1px 0 rgba(255, 255, 255, 0.72) inset;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
     }
@@ -32,9 +32,7 @@
     body {
       margin: 0;
       color: var(--ink);
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(242, 246, 251, 0.92) 43%, rgba(236, 242, 248, 0.96) 100%),
-        linear-gradient(180deg, #fbfbfd 0%, #eef2f7 100%);
+      background: #f7f7f8;
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
       text-rendering: geometricPrecision;
@@ -399,8 +397,8 @@
     select:focus,
     textarea:focus {
       background: #fff;
-      border-color: rgba(0, 122, 255, 0.7);
-      box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.14);
+      border-color: rgba(13, 13, 13, 0.42);
+      box-shadow: 0 0 0 4px rgba(13, 13, 13, 0.08);
     }
 
     .primary {
@@ -412,16 +410,16 @@
       border-radius: 8px;
       padding: 0 16px;
       color: #fff;
-      background: linear-gradient(180deg, #2f9bff, #007aff);
+      background: #111111;
       font-weight: 800;
       white-space: nowrap;
-      box-shadow: 0 12px 24px rgba(0, 122, 255, 0.24), var(--glow);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.16), var(--glow);
       transition: transform 0.16s ease, box-shadow 0.16s ease;
     }
 
     .primary:hover {
       transform: translateY(-1px);
-      box-shadow: 0 16px 30px rgba(0, 122, 255, 0.3), var(--glow);
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2), var(--glow);
     }
 
     .task-toolbar {
@@ -1548,7 +1546,7 @@
               </div>
               <button class="primary" type="submit">发送给小助手</button>
             </form>
-            <div class="helper-text">小助手会尽量自动判断应该交给谁，例如吃饭交给齐厨师并通知管家陈先生，用车交给管家陈先生，学习交给 KK。</div>
+            <div class="helper-text">小助手会先判断日期、人物、地点和执行人；不确定的事会交给陈管家协调。</div>
           </div>
           <div class="action-pane" id="linkedSchedulePanel" hidden>
             <form class="schedule-form" id="linkedScheduleForm">
@@ -1584,7 +1582,7 @@
               <div class="field">
                 <label for="scheduleDriver">接送人</label>
                 <select id="scheduleDriver">
-                  <option value="driver">管家陈先生</option>
+                  <option value="driver">陈管家</option>
                   <option value="driverLei">司机阿磊</option>
                 </select>
               </div>
@@ -1592,10 +1590,10 @@
                 <label for="scheduleCompanion">执行人（可多选）</label>
                 <select id="scheduleCompanion" multiple>
                   <option value="none">不指定执行人</option>
-                  <option value="helperA">菲律宾佣人 A</option>
-                  <option value="helperB">菲律宾佣人 B</option>
-                  <option value="helperC">菲律宾佣人 C</option>
-                  <option value="driver">管家陈先生</option>
+                  <option value="helperA">服务员 A</option>
+                  <option value="helperB">服务员 B</option>
+                  <option value="helperC">服务员 C</option>
+                  <option value="driver">陈管家</option>
                   <option value="driverLei">司机阿磊</option>
                   <option value="kk">家庭教师 KK</option>
                 </select>
@@ -1750,7 +1748,7 @@
 
   <script>
     const members = [
-      { id: "all", name: "全家总览", role: "妈妈和管家陈先生查看", color: "#2f7d57", initials: "总" },
+      { id: "all", name: "全家总览", role: "妈妈和陈管家查看", color: "#111111", initials: "总" },
       { id: "mom", name: "妈妈", role: "最高负责人", color: "#276749", initials: "妈", manager: true },
       { id: "dad", name: "爸爸", role: "家庭成员", color: "#315f72", initials: "爸" },
       { id: "grandpa", name: "姥爷", role: "妈妈的爸爸", color: "#5f6f52", initials: "爷" },
@@ -1758,10 +1756,10 @@
       { id: "daughter1", name: "Angela", role: "大女儿", color: "#d05b44", initials: "An" },
       { id: "daughter2", name: "Alisa", role: "二女儿", color: "#b5466b", initials: "Al" },
       { id: "son", name: "Aron", role: "小儿子", color: "#2d6cdf", initials: "Ar" },
-      { id: "helperA", name: "菲律宾佣人 A", role: "Helper A", color: "#008b8b", initials: "A" },
-      { id: "helperB", name: "菲律宾佣人 B", role: "Helper B", color: "#6b7f20", initials: "B" },
-      { id: "helperC", name: "菲律宾佣人 C", role: "Helper C", color: "#9b5a2e", initials: "C" },
-      { id: "driver", name: "管家陈先生", role: "协助妈妈管理日常工作", color: "#4b5f93", initials: "陈", manager: true },
+      { id: "helperA", name: "服务员 A", role: "Helper A", color: "#008b8b", initials: "A" },
+      { id: "helperB", name: "服务员 B", role: "Helper B", color: "#6b7f20", initials: "B" },
+      { id: "helperC", name: "服务员 C", role: "Helper C", color: "#9b5a2e", initials: "C" },
+      { id: "driver", name: "陈管家", role: "协助妈妈管理日常工作", color: "#4b5f93", initials: "陈", manager: true },
       { id: "driverLei", name: "司机阿磊", role: "Driver", color: "#2f6f89", initials: "磊" },
       { id: "chef", name: "齐厨师", role: "Chef", color: "#9a6a00", initials: "齐" },
       { id: "kk", name: "家庭教师 KK", role: "Tutor", color: "#6d4aaa", initials: "KK" }
@@ -2071,7 +2069,7 @@
         return "准备课本、练习册、笔、计时器和水杯，提前把桌面清出来。";
       }
       if (title.includes("药") || title.includes("日用品") || title.includes("姥姥") || title.includes("姥爷")) {
-        return "核对清单、药盒、水杯和纸巾，发现缺少物品先提醒妈妈或陈先生。";
+        return "核对清单、药盒、水杯和纸巾，发现缺少物品先提醒妈妈或陈管家。";
       }
       if (title.includes("草坪") || title.includes("水系")) {
         return "准备户外工具、手套和防滑鞋，先确认电源、水源或周边安全。";
@@ -2083,8 +2081,8 @@
         return "准备抹布、垃圾袋、收纳篮和补充用品，先检查是否有孩子或贵重物品。";
       }
       return location === "none"
-        ? "提前确认要带的物品、时间和联系人，不确定就先问妈妈或陈先生。"
-        : "提前确认地点、工具、相关物品和注意事项，不确定就先问妈妈或陈先生。";
+        ? "提前确认要带的物品、时间和联系人，不确定就先问妈妈或陈管家。"
+        : "提前确认地点、工具、相关物品和注意事项，不确定就先问妈妈或陈管家。";
     }
 
     function timeToMinutes(time) {
@@ -2179,7 +2177,7 @@
         `;
         button.addEventListener("click", () => {
           state.selectedMember = member.id;
-          state.mobileTab = member.id === "all" || member.id === "mom" ? "overview" : "member";
+          state.mobileTab = member.id === "all" ? "overview" : "member";
           document.getElementById("memberSheet").hidden = true;
           resetRoutineForm();
           render();
@@ -2320,7 +2318,7 @@
         title.textContent = "每日固定事项";
         form.style.display = "none";
         generateAll.style.display = "";
-        list.innerHTML = `<div class="empty">这里不是编辑区，是早上一键排班用的。点“生成全部日常”，佣人、齐厨师、管家陈先生和 KK 的固定工作会一次排好。要编辑模板，请点左边某个人，在那个人页面里修改。</div>`;
+        list.innerHTML = `<div class="empty">这里不是编辑区，是早上一键排班用的。点“生成全部日常”，服务员、齐厨师、陈管家和 KK 的固定工作会一次排好。要编辑模板，请点左边某个人，在那个人页面里修改。</div>`;
         panel.style.display = "";
         return;
       }
@@ -2549,7 +2547,7 @@
             groupId,
             groupTitle,
             relationLabel: `${eater.name}需求`,
-            prep: "到时间前确认自己是否还需要这个安排，有变化就告诉妈妈或管家陈先生。"
+            prep: "到时间前确认自己是否还需要这个安排，有变化就告诉妈妈或陈管家。"
           });
           tasks.push({
             title: `准备${eater.name}的${meal}需求：${clean}`,
@@ -2560,18 +2558,18 @@
             groupId,
             groupTitle,
             relationLabel: "齐厨师准备",
-            prep: "确认食材、过敏忌口、餐具和送达时间，准备好后反馈给妈妈或管家陈先生。"
+            prep: "确认食材、过敏忌口、餐具和送达时间，准备好后反馈给妈妈或陈管家。"
           });
         });
       } else if (isScheduleRequest(clean)) {
-        const time = extractTime(clean) || "15:00";
+        const time = extractTime(clean) || inferTimeFromPeriod(clean, "15:00");
         const companion = hasCompanionMention(clean) ? detectCompanion(clean) : defaultCompanionForSchedule(clean);
         const dates = repeatDatesForRequest(clean);
         dates.forEach(date => addLinkedSchedule({
           personId,
           title: extractActivityTitle(clean),
           time,
-          location: "none",
+          location: inferLocation(clean),
           rideMode: inferRideMode(clean),
           companionId: companion,
           driverId: detectDriver(clean),
@@ -2602,12 +2600,42 @@
           time: "16:30",
           prep: "准备课本、练习册、笔和水杯，提前确认孩子今天的学习目标。"
         });
+      } else if (/打扫|整理|清洁|收拾|卫生|草坪|水系|停车场/.test(clean)) {
+        const assignee = detectExplicitAssignee(clean) || detectAssignablePerson(clean, "");
+        const dates = repeatDatesForRequest(clean);
+        const time = extractTime(clean) || inferTimeFromPeriod(clean, "10:00");
+        const location = inferLocation(clean);
+        dates.forEach(date => {
+          tasks.push({
+            title: extractServiceTaskTitle(clean, "整理需求"),
+            assignee: assignee || "helperA",
+            date,
+            location,
+            time,
+            prep: suggestServicePrep(clean, location)
+          });
+        });
+      } else if (detectExplicitAssignee(clean) || detectAssignablePerson(clean, "")) {
+        const assignee = detectExplicitAssignee(clean) || detectAssignablePerson(clean, "driver");
+        const dates = repeatDatesForRequest(clean);
+        const time = extractTime(clean) || inferTimeFromPeriod(clean, "09:30");
+        dates.forEach(date => {
+          tasks.push({
+            title: extractServiceTaskTitle(clean, "临时事项"),
+            assignee,
+            date,
+            location: inferLocation(clean),
+            time,
+            prep: suggestServicePrep(clean, inferLocation(clean))
+          });
+        });
       } else if (/打扫|整理|清洁|收拾|卫生/.test(clean)) {
         tasks.push({
           title: `${requester.name}提出的整理需求：${clean}`,
           assignee: "helperA",
-          location: "none",
-          time: "10:00",
+          date: repeatDatesForRequest(clean)[0],
+          location: inferLocation(clean),
+          time: extractTime(clean) || inferTimeFromPeriod(clean, "10:00"),
           prep: "准备清洁用品、垃圾袋和收纳篮，先确认是否有贵重物品。"
         });
       } else if (!isPrivateFeedback) {
@@ -2632,9 +2660,75 @@
     }
 
     function repeatDatesForRequest(text) {
-      return /本周.*每天|这周.*每天|每天.*本周|每天.*这周|每天/.test(text)
-        ? datesForSelectedWeek()
-        : [state.selectedDate];
+      if (/本周.*每天|这周.*每天|每天.*本周|每天.*这周|每天/.test(text)) {
+        return datesForSelectedWeek();
+      }
+      return [inferSingleDate(text)];
+    }
+
+    function inferSingleDate(text) {
+      if (/大后天/.test(text)) return addDays(todayISO(), 3);
+      if (/后天/.test(text)) return addDays(todayISO(), 2);
+      if (/明天|明日/.test(text)) return addDays(todayISO(), 1);
+      if (/今天|今日/.test(text)) return todayISO();
+      const weekMatch = text.match(/(?:本周|这周|周|星期)([一二三四五六日天1234567])/);
+      if (weekMatch) {
+        const target = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 7, 天: 7, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7 }[weekMatch[1]];
+        return addDays(weekStartISO(state.selectedDate), target - 1);
+      }
+      return state.selectedDate;
+    }
+
+    function inferTimeFromPeriod(text, fallback = "09:00") {
+      if (/凌晨/.test(text)) return "06:00";
+      if (/早上|早晨/.test(text)) return "08:00";
+      if (/上午/.test(text)) return "09:00";
+      if (/中午/.test(text)) return "12:00";
+      if (/下午/.test(text)) return "15:00";
+      if (/晚上|晚间/.test(text)) return "19:00";
+      return fallback;
+    }
+
+    function inferLocation(text) {
+      if (/草坪/.test(text)) return "outdoor-lawn";
+      if (/停车场|车库|车辆/.test(text)) return "outdoor-parking";
+      if (/水系|水池|水景/.test(text)) return "outdoor-water";
+      if (/厨房/.test(text)) return "floor1-kitchen";
+      if (/餐厅/.test(text)) return "floor1-dining";
+      if (/大客厅|一层客厅/.test(text)) return "floor1-living";
+      if (/书房/.test(text)) return "floor1-study";
+      if (/高尔夫.*卫生间/.test(text)) return "floor1-golf-bathroom";
+      if (/高尔夫/.test(text)) return "floor1-golf";
+      if (/卫生间/.test(text)) return "floor1-bathroom";
+      if (/二层客厅/.test(text)) return "floor2-living";
+      if (/妈妈.*卧室|妈妈房间/.test(text)) return "floor2-mom-bedroom";
+      if (/姥姥|姥爷|外婆|外公/.test(text) && /卧室|房间/.test(text)) return "floor2-grandparents-bedroom";
+      if (/Angela|安安|李馨逸/.test(text) && /卧室|房间/.test(text)) return "floor2-angela-bedroom";
+      if (/Alisa|玥|月月|玥玥|李馨玥/.test(text) && /卧室|房间/.test(text)) return "floor2-alisa-bedroom";
+      if (/Aron|康康|李兴睿/.test(text) && /卧室|房间/.test(text)) return "floor2-aron-bedroom";
+      return "none";
+    }
+
+    function extractServiceTaskTitle(text, fallback) {
+      const cleaned = text
+        .replace(/大后天|后天|明天|明日|今天|今日|本周|这周|每天|上午|早上|早晨|中午|下午|晚上|晚间/g, "")
+        .replace(/(?:\d{1,2}(?:[:：]\d{2}|点半?|点)|[一二两三四五六七八九十]{1,3}点半?)/g, "")
+        .replace(/执行人|安排给|交给|让|请|麻烦/g, "")
+        .replace(/服务员\s*[ABC]|服务员[ABC]|菲律宾佣人\s*[ABC]|菲律宾佣人[ABC]|佣人\s*[ABC]|佣人[ABC]|阿姨\s*[ABC]|阿姨[ABC]/gi, "")
+        .replace(/陈管家|陈先生|陈小峰|陈晓峰|小陈|阿磊|司机|齐厨师|厨师|家庭教师|KK|kk/g, "")
+        .replace(/[，,。；;\s]+/g, " ")
+        .trim();
+      return cleaned || fallback;
+    }
+
+    function suggestServicePrep(text, location) {
+      if (/打扫|清洁|卫生|草坪|水系|停车场/.test(text)) {
+        return "准备对应工具，先确认现场是否有贵重物品或孩子用品，完成后拍照或简单反馈。";
+      }
+      if (/拿|带|准备|购买|买/.test(text)) {
+        return "确认具体物品、数量、地点和完成时间，不清楚先问妈妈或陈管家。";
+      }
+      return suggestPrep(text, location);
     }
 
     function inferMealName(text, time) {
@@ -2696,7 +2790,7 @@
     }
 
     function hasCompanionMention(text) {
-      return /执行人|陪同|陪|跟进|陈先生|管家|阿磊|司机|kk|KK|佣人A|佣人B|佣人C|helper/i.test(text);
+      return /执行人|陪同|陪|跟进|陈管家|陈先生|管家|阿磊|司机|kk|KK|服务员\s*[ABC]|佣人\s*[ABC]|阿姨\s*[ABC]|helper/i.test(text);
     }
 
     function defaultCompanionForSchedule(text) {
@@ -2729,12 +2823,12 @@
     }
 
     function detectCompanion(text) {
-      if (/陈先生|陈小峰|陈晓峰|小陈|管家/.test(text)) return "driver";
+      if (/陈管家|陈先生|陈小峰|陈晓峰|小陈|管家/.test(text)) return "driver";
       if (/阿磊|司机/.test(text)) return "driverLei";
       if (/kk|KK|老师|家庭教师/i.test(text)) return "kk";
-      if (/佣人A|helper a|helperA|A陪|a陪/i.test(text)) return "helperA";
-      if (/佣人B|helper b|helperB|B陪|b陪/i.test(text)) return "helperB";
-      if (/佣人C|helper c|helperC|C陪|c陪/i.test(text)) return "helperC";
+      if (/服务员\s*A|服务员A|菲律宾佣人\s*A|菲律宾佣人A|佣人\s*A|佣人A|阿姨\s*A|阿姨A|helper\s*a|helperA|A陪|a陪/i.test(text)) return "helperA";
+      if (/服务员\s*B|服务员B|菲律宾佣人\s*B|菲律宾佣人B|佣人\s*B|佣人B|阿姨\s*B|阿姨B|helper\s*b|helperB|B陪|b陪/i.test(text)) return "helperB";
+      if (/服务员\s*C|服务员C|菲律宾佣人\s*C|菲律宾佣人C|佣人\s*C|佣人C|阿姨\s*C|阿姨C|helper\s*c|helperC|C陪|c陪/i.test(text)) return "helperC";
       if (/不陪|不用陪|不需要陪/i.test(text)) return "none";
       return "helperA";
     }
@@ -2745,14 +2839,20 @@
     }
 
     function detectAssignablePerson(text) {
-      if (/佣人A|helper a|helperA|阿姨A|A/i.test(text)) return "helperA";
-      if (/佣人B|helper b|helperB|阿姨B|B/i.test(text)) return "helperB";
-      if (/佣人C|helper c|helperC|阿姨C|C/i.test(text)) return "helperC";
+      if (/服务员\s*A|服务员A|菲律宾佣人\s*A|菲律宾佣人A|佣人\s*A|佣人A|阿姨\s*A|阿姨A|helper\s*a|helperA/i.test(text)) return "helperA";
+      if (/服务员\s*B|服务员B|菲律宾佣人\s*B|菲律宾佣人B|佣人\s*B|佣人B|阿姨\s*B|阿姨B|helper\s*b|helperB/i.test(text)) return "helperB";
+      if (/服务员\s*C|服务员C|菲律宾佣人\s*C|菲律宾佣人C|佣人\s*C|佣人C|阿姨\s*C|阿姨C|helper\s*c|helperC/i.test(text)) return "helperC";
       if (/阿磊|司机/.test(text)) return "driverLei";
       if (/齐厨师|厨师/.test(text)) return "chef";
       if (/kk|KK|家庭教师|老师/i.test(text)) return "kk";
-      if (/陈先生|陈小峰|陈晓峰|小陈|管家/.test(text)) return "driver";
-      return detectPersonId(text, "driver");
+      if (/陈管家|陈先生|陈小峰|陈晓峰|小陈|管家/.test(text)) return "driver";
+      return arguments.length > 1 ? arguments[1] : detectPersonId(text, "driver");
+    }
+
+    function detectExplicitAssignee(text) {
+      const explicit = text.match(/(?:执行人|安排给|交给|让|请|麻烦)\s*([^，,。；;\s]+)/);
+      if (explicit) return detectAssignablePerson(explicit[1], "");
+      return detectAssignablePerson(text, "");
     }
 
     function chineseHourToNumber(text) {
@@ -2892,7 +2992,7 @@
           groupId,
           groupTitle,
           relationLabel: `${memberById(companionId).name}执行`,
-          prep: `确认时间、地点和需要带的物品；有变化再反馈给妈妈或管家陈先生。`
+          prep: `确认时间、地点和需要带的物品；有变化再反馈给妈妈或陈管家。`
         });
       }
       companionTasks.forEach(task => createTask(task));
@@ -2909,7 +3009,7 @@
     function suggestSchedulePrep(personId, title, location) {
       const person = memberById(personId);
       if (/会议|公司|开会|见客|工作/.test(title)) {
-        return "准备手机、电脑、文件、包和出门衣物，提前确认管家陈先生的用车安排。";
+        return "准备手机、电脑、文件、包和出门衣物，提前确认陈管家的用车安排。";
       }
       if (/音乐|钢琴|课|学习|培训|舞蹈|运动|篮球|游泳|网球|高尔夫/.test(title)) {
         return `准备${person.name}上课需要的书包、教材、乐器或水杯，提前确认接送时间。`;
@@ -3122,14 +3222,14 @@
         }
       }
       if (action === "assign") {
-        const text = window.prompt("分配给谁？可以写：佣人A、佣人B、佣人C、阿磊、齐厨师、KK、妈妈、爸爸、Angela、Alisa、Aron");
+        const text = window.prompt("分配给谁？可以写：服务员A、服务员B、服务员C、阿磊、齐厨师、KK、妈妈、爸爸、Angela、Alisa、Aron");
         if (text && text.trim()) {
           const nextAssignee = detectAssignablePerson(text.trim());
           task.assignee = nextAssignee;
           task.relationLabel = `${memberById(nextAssignee).name}执行`;
           state.notices.unshift({
             id: uid(),
-            text: `管家陈先生把「${task.title}」分配给 ${memberById(nextAssignee).name}。`,
+            text: `陈管家把「${task.title}」分配给 ${memberById(nextAssignee).name}。`,
             time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
           });
           notifyAssignee(nextAssignee, task.title);
@@ -3272,7 +3372,7 @@
     function renderMomDashboard() {
       const dashboard = document.getElementById("momDashboard");
       const dot = document.getElementById("feedbackUnreadDot");
-      const canSee = state.selectedMember === "all" || state.selectedMember === "mom";
+      const canSee = state.selectedMember === "all";
       dashboard.style.display = canSee ? "" : "none";
       dot.hidden = !canSee;
       if (!canSee) return;
