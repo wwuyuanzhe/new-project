@@ -2523,10 +2523,18 @@
             })))
           })
         });
-        if (!response.ok) return false;
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          throw new Error(errorBody.error || "GPT接口暂时不可用");
+        }
         const plan = await response.json();
         return applyGptTaskPlan(plan, text, requesterId);
       } catch (error) {
+        state.notices.unshift({
+          id: uid(),
+          text: `GPT解析暂时不可用，已改用本地规则。原因：${error.message}`,
+          time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+        });
         return false;
       }
     }
