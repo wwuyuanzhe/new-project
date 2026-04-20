@@ -884,6 +884,23 @@
       overflow-wrap: anywhere;
     }
 
+    .reassign-form {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .reassign-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .task.assigned {
+      border-left-color: #8e8e93;
+      background: rgba(247, 247, 248, 0.92);
+    }
+
     .red-dot {
       display: inline-grid;
       place-items: center;
@@ -1744,6 +1761,41 @@
         <div class="notice-list" id="overviewSheetContent"></div>
       </div>
     </div>
+
+    <div class="member-sheet" id="reassignSheet" hidden>
+      <div class="member-sheet-backdrop" id="reassignSheetBackdrop"></div>
+      <div class="member-sheet-panel">
+        <div class="panel-head">
+          <h2>分配任务</h2>
+          <button class="action" type="button" id="closeReassignSheet">关闭</button>
+        </div>
+        <form class="reassign-form" id="reassignForm">
+          <div class="field">
+            <label for="reassignTitle">事项</label>
+            <input id="reassignTitle" />
+          </div>
+          <div class="field">
+            <label for="reassignAssignees">分配给谁（可多选）</label>
+            <select id="reassignAssignees" multiple></select>
+          </div>
+          <div class="reassign-grid">
+            <div class="field">
+              <label for="reassignDate">日期</label>
+              <input id="reassignDate" type="date" />
+            </div>
+            <div class="field">
+              <label for="reassignTime">时间</label>
+              <input id="reassignTime" type="time" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="reassignLocation">地点</label>
+            <select id="reassignLocation"></select>
+          </div>
+          <button class="primary" type="submit">确认分配</button>
+        </form>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1865,6 +1917,7 @@
       mobileTab: "overview",
       actionMode: "natural",
       editingRoutineIndex: null,
+      reassignTaskId: null,
       tasks: loadTasks(),
       notices: JSON.parse(localStorage.getItem("familyNotices") || "[]"),
       feedbacks: JSON.parse(localStorage.getItem("familyFeedbacks") || "[]"),
@@ -1919,6 +1972,7 @@
           groupId: task.groupId || "",
           groupTitle: task.groupTitle || "",
           relationLabel: task.relationLabel || "",
+          assignedAt: task.assignedAt || "",
           prep: task.prep || suggestPrep(match ? match[1] : task.title, task.location || "none"),
           prepReminderSent: task.prepReminderSent || false
         };
@@ -2004,9 +2058,14 @@
       const assignee = memberById(assigneeId);
       state.notices.unshift({
         id: uid(),
-        text: `${assignee.name} 收到新事项：「${title}」`,
+        text: `收到新事项：${assignee.name}「${title}」`,
         time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
       });
+    }
+
+    function requestSourceText(requesterId) {
+      const requester = memberById(requesterId);
+      return requester && requester.id !== "all" ? `${requester.name}的请求` : "收到新的请求";
     }
 
     function addFeedback(fromId, text) {
@@ -2191,7 +2250,7 @@
     }
 
     function renderAssignees() {
-      const selects = [document.getElementById("schedulePerson"), document.getElementById("routineAssignee")].filter(Boolean);
+      const selects = [document.getElementById("schedulePerson"), document.getElementById("routineAssignee"), document.getElementById("reassignAssignees")].filter(Boolean);
       selects.forEach(select => {
         select.innerHTML = "";
       members.filter(member => member.id !== "all").forEach(member => {
@@ -2215,7 +2274,7 @@
     }
 
     function renderLocations() {
-      const selects = [document.getElementById("routineLocation"), document.getElementById("scheduleLocation")].filter(Boolean);
+      const selects = [document.getElementById("routineLocation"), document.getElementById("scheduleLocation"), document.getElementById("reassignLocation")].filter(Boolean);
       selects.forEach(select => {
         select.innerHTML = "";
       locations.forEach(section => {
@@ -2276,7 +2335,7 @@
     }
 
     function currentSpeakerId() {
-      if (state.selectedMember === "all") return "mom";
+      if (state.selectedMember === "all") return "all";
       return state.selectedMember;
     }
 
@@ -2471,6 +2530,7 @@
         groupId: task.groupId || "",
         groupTitle: task.groupTitle || "",
         relationLabel: task.relationLabel || "",
+        assignedAt: "",
         prep: task.prep || suggestPrep(task.title, task.location || "none"),
         prepReminderSent: false,
         status: "todo",
@@ -2492,6 +2552,7 @@
         groupId,
         groupTitle,
         relationLabel,
+        assignedAt: "",
         prep: prep || suggestPrep(title, location),
         prepReminderSent: false,
         status: "todo",
@@ -2705,7 +2766,7 @@
         return;
       } else if (/车|接|送|司机|出门|学校|上课|放学/.test(clean)) {
         tasks.push({
-          title: `${requester.name}的用车/接送需求：${clean}`,
+          title: `${requestSourceText(requesterId)}：${clean}`,
           assignee: "driver",
           location: "outdoor-parking",
           time: "09:00",
@@ -2713,7 +2774,7 @@
         });
       } else if (/作业|学习|英文|阅读|考试|练习|老师/.test(clean) || lower.includes("homework")) {
         tasks.push({
-          title: `${requester.name}的学习需求：${clean}`,
+          title: `${requestSourceText(requesterId)}：${clean}`,
           assignee: "kk",
           location: requesterId === "daughter2" ? "floor2-alisa-bedroom" : requesterId === "daughter1" ? "floor2-angela-bedroom" : requesterId === "son" ? "floor2-aron-bedroom" : "none",
           time: "16:30",
@@ -2750,7 +2811,7 @@
         });
       } else if (/打扫|整理|清洁|收拾|卫生/.test(clean)) {
         tasks.push({
-          title: `${requester.name}提出的整理需求：${clean}`,
+          title: `${requestSourceText(requesterId)}：${clean}`,
           assignee: "helperA",
           date: repeatDatesForRequest(clean)[0],
           location: inferLocation(clean),
@@ -2759,7 +2820,7 @@
         });
       } else if (!isPrivateFeedback) {
         tasks.push({
-          title: `${requester.name}的请求：${clean}`,
+          title: `${requestSourceText(requesterId)}：${clean}`,
           assignee: "driver",
           location: "none",
           time: "09:30",
@@ -2772,7 +2833,7 @@
         tasks.forEach(task => createTaskForAssignee(task));
         state.notices.unshift({
           id: uid(),
-          text: `小助手已把${requester.name}的一句话要求整理成 ${tasks.length} 个事项。`,
+          text: `小助手已把${requestSourceText(requesterId)}整理成 ${tasks.length} 个事项。`,
           time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
         });
       }
@@ -3321,6 +3382,27 @@
       return group;
     }
 
+    function relationSummaryBadges(task) {
+      if (!task.groupId) return "";
+      const groupTasks = state.tasks.filter(item => item.groupId === task.groupId);
+      if (!groupTasks.length) return "";
+      const people = groupTasks
+        .filter(item => /本人/.test(item.relationLabel || ""))
+        .map(item => memberById(item.assignee).name);
+      const rides = groupTasks
+        .filter(item => /接送/.test(item.relationLabel || ""))
+        .map(item => memberById(item.assignee).name);
+      const executors = groupTasks
+        .filter(item => /执行|陪同|跟进/.test(item.relationLabel || ""))
+        .map(item => memberById(item.assignee).name);
+      const unique = list => [...new Set(list)].join("、");
+      return [
+        people.length ? `<span class="badge">人员：${unique(people)}</span>` : "",
+        rides.length ? `<span class="badge">接送：${unique(rides)}</span>` : "",
+        executors.length ? `<span class="badge">陪同/执行：${unique(executors)}</span>` : ""
+      ].join("");
+    }
+
     function createTaskCard(task) {
         const assignee = memberById(task.assignee);
         const prep = task.prep || suggestPrep(task.title, task.location);
@@ -3331,8 +3413,10 @@
           ? `<span class="badge">${appLanguage === "en" ? "Follow-up" : "跟进人"}：${followUpText(task.followUp || inferFollowUp(task))}</span>`
           : "";
         const dateBadge = isWeekRange() ? `<span class="badge">${dateShortText(task.date || todayISO())}</span>` : "";
+        const assignedBadge = task.assignedAt ? `<span class="badge">已分配</span>` : "";
+        const relationBadges = relationSummaryBadges(task);
         const card = document.createElement("article");
-        card.className = `task ${task.urgent ? "urgent" : ""} ${task.status}`;
+        card.className = `task ${task.urgent ? "urgent" : ""} ${task.status} ${task.assignedAt ? "assigned" : ""}`;
         card.innerHTML = `
           <div class="task-top">
             <div>
@@ -3343,6 +3427,8 @@
                 <span class="badge">${assignee.name}</span>
                 ${locationBadge}
                 ${followUpBadge}
+                ${assignedBadge}
+                ${relationBadges}
               </div>
             </div>
             <span class="badge status ${task.status === "done" ? "done" : ""}">${statusText(task.status)}</span>
@@ -3352,7 +3438,7 @@
             <button class="action" type="button" data-action="doing">${appLanguage === "en" ? "Start" : "开始"}</button>
             <button class="action" type="button" data-action="done">${appLanguage === "en" ? "Done" : "完成"}</button>
             <button class="action warn" type="button" data-action="feedback">${appLanguage === "en" ? "Feedback" : "内容反馈"}</button>
-            ${task.assignee === "driver" ? `<button class="action" type="button" data-action="assign">分配</button>` : ""}
+            ${task.assignee === "driver" ? `<button class="action" type="button" data-action="assign">${task.assignedAt ? "再次分配" : "分配"}</button>` : ""}
             <button class="action" type="button" data-action="delete">${appLanguage === "en" ? "Delete" : "删除"}</button>
           </div>
         `;
@@ -3447,6 +3533,60 @@
       container.appendChild(board);
     }
 
+    function openReassignSheet(task) {
+      state.reassignTaskId = task.id;
+      document.getElementById("reassignTitle").value = task.title || "";
+      document.getElementById("reassignDate").value = task.date || state.selectedDate;
+      document.getElementById("reassignTime").value = task.time || "09:00";
+      document.getElementById("reassignLocation").value = task.location || "none";
+      setSelectedValues(document.getElementById("reassignAssignees"), []);
+      document.getElementById("reassignSheet").hidden = false;
+    }
+
+    function closeReassignSheet() {
+      state.reassignTaskId = null;
+      document.getElementById("reassignSheet").hidden = true;
+    }
+
+    function submitReassignment() {
+      const sourceTask = state.tasks.find(item => item.id === state.reassignTaskId);
+      if (!sourceTask) return;
+      const assignees = selectedValues(document.getElementById("reassignAssignees")).filter(id => id !== "all");
+      if (!assignees.length) {
+        window.alert("请至少选择一个要分配的人。");
+        return;
+      }
+      const title = document.getElementById("reassignTitle").value.trim() || sourceTask.title;
+      const date = document.getElementById("reassignDate").value || sourceTask.date || state.selectedDate;
+      const time = document.getElementById("reassignTime").value || sourceTask.time || "09:00";
+      const location = document.getElementById("reassignLocation").value || sourceTask.location || "none";
+      const groupId = assignees.length > 1 ? uid() : sourceTask.groupId;
+      const groupTitle = assignees.length > 1 ? `重新分配：${title}` : sourceTask.groupTitle;
+      assignees.forEach(assignee => {
+        createTask({
+          title,
+          assignee,
+          date,
+          location,
+          time,
+          followUp: sourceTask.followUp || "none",
+          groupId,
+          groupTitle,
+          relationLabel: `${memberById(assignee).name}执行`,
+          prep: sourceTask.prep || suggestPrep(title, location)
+        });
+      });
+      sourceTask.assignedAt = new Date().toISOString();
+      state.notices.unshift({
+        id: uid(),
+        text: `陈管家已分配「${title}」给 ${assignees.map(id => memberById(id).name).join("、")}，时间 ${dateShortText(date)} ${time}。`,
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      });
+      closeReassignSheet();
+      save();
+      render();
+    }
+
     function updateTask(id, action) {
       const task = state.tasks.find(item => item.id === id);
       if (!task) return;
@@ -3465,38 +3605,8 @@
         }
       }
       if (action === "assign") {
-        const text = window.prompt("分配给谁？可多选，例如：服务员A 服务员B 陈管家 Angela");
-        if (text && text.trim()) {
-          const nextAssignees = detectAssignablePeople(text.trim());
-          if (!nextAssignees.length) return;
-          const timeText = window.prompt("新任务时间？例如 15:00。留空则使用原时间。", task.time || "09:00");
-          const nextTime = timeText && extractTime(timeText.trim())
-            ? extractTime(timeText.trim())
-            : timeText && /^\d{1,2}:\d{2}$/.test(timeText.trim())
-              ? timeText.trim().padStart(5, "0")
-              : task.time;
-          const groupId = nextAssignees.length > 1 ? uid() : task.groupId;
-          const groupTitle = nextAssignees.length > 1 ? `重新分配：${task.title}` : task.groupTitle;
-          nextAssignees.forEach(nextAssignee => {
-            createTask({
-              title: task.title,
-              assignee: nextAssignee,
-              date: task.date || state.selectedDate,
-              location: task.location || "none",
-              time: nextTime,
-              followUp: task.followUp || "none",
-              groupId,
-              groupTitle,
-              relationLabel: `${memberById(nextAssignee).name}执行`,
-              prep: task.prep || suggestPrep(task.title, task.location || "none")
-            });
-          });
-          state.notices.unshift({
-            id: uid(),
-            text: `陈管家新增分配「${task.title}」给 ${nextAssignees.map(id => memberById(id).name).join("、")}，时间 ${nextTime}。`,
-            time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
-          });
-        }
+        openReassignSheet(task);
+        return;
       }
       if (action === "delete") {
         state.notices.unshift({
@@ -4018,6 +4128,15 @@
 
     document.getElementById("overviewSheetBackdrop").addEventListener("click", () => {
       document.getElementById("overviewSheet").hidden = true;
+    });
+
+    document.getElementById("closeReassignSheet").addEventListener("click", closeReassignSheet);
+
+    document.getElementById("reassignSheetBackdrop").addEventListener("click", closeReassignSheet);
+
+    document.getElementById("reassignForm").addEventListener("submit", event => {
+      event.preventDefault();
+      submitReassignment();
     });
 
     document.getElementById("actionTabs").addEventListener("click", event => {
