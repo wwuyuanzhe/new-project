@@ -74,6 +74,10 @@
       font-weight: 850;
     }
 
+    .brand {
+      min-width: 0;
+    }
+
     .brand p {
       margin: 7px 0 0;
       color: var(--muted);
@@ -187,6 +191,15 @@
       margin: 0;
       font-size: 18px;
       font-weight: 820;
+    }
+
+    .date-head {
+      justify-content: flex-start;
+    }
+
+    .date-head .date-pill {
+      box-shadow: none;
+      background: rgba(255, 255, 255, 0.66);
     }
 
     .view-switch {
@@ -1170,11 +1183,17 @@
 
       .app {
         padding: 12px 12px 0;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-x: hidden;
       }
 
       .topbar {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 104px;
+        grid-template-columns: minmax(0, 1fr) minmax(88px, 104px);
+        width: 100%;
+        overflow: hidden;
         align-items: start;
         column-gap: 10px;
         padding: 6px 0 12px;
@@ -1191,11 +1210,9 @@
       }
 
       .identity-bar {
-        position: fixed;
-        left: calc(100vw - 220px);
-        top: 12px;
-        z-index: 25;
-        width: 104px;
+        position: static;
+        width: 100%;
+        min-width: 0;
         justify-content: flex-end;
       }
 
@@ -1210,9 +1227,7 @@
       }
 
       .date-pill {
-        grid-column: 1 / -1;
-        width: 228px;
-        margin-top: 12px;
+        width: 100%;
         display: grid;
         grid-template-columns: 28px minmax(0, 1fr) 28px;
         justify-content: stretch;
@@ -1221,6 +1236,15 @@
         gap: 5px;
         white-space: normal;
         font-size: 12px;
+      }
+
+      .date-head {
+        padding: 10px 12px;
+      }
+
+      .date-head .date-pill {
+        margin: 0;
+        max-width: 250px;
       }
 
       #prevDateBtn {
@@ -1616,14 +1640,6 @@
       <div class="identity-bar">
         <button class="identity-pill" type="button" id="switchUserBtn">当前身份：未确认</button>
       </div>
-      <div class="date-pill" aria-label="今天日期">
-        <button class="date-button" type="button" id="prevDateBtn">‹</button>
-        <strong id="todayText"></strong>
-        <input class="date-input" id="currentDateInput" type="date" />
-        <button class="date-button" type="button" id="nextDateBtn">›</button>
-        <button class="chip active" type="button" id="langZhBtn" data-lang="zh">中文</button>
-        <button class="chip" type="button" id="langEnBtn" data-lang="en">EN</button>
-      </div>
     </header>
 
     <div class="layout">
@@ -1780,13 +1796,20 @@
       </main>
 
       <aside class="panel right" id="overviewPanel">
-        <div class="panel-head">
-          <h2>今日重点 <span class="red-dot" id="feedbackUnreadDot" hidden>0</span></h2>
+        <div class="panel-head date-head">
+          <div class="date-pill" aria-label="今天日期">
+            <button class="date-button" type="button" id="prevDateBtn">‹</button>
+            <strong id="todayText"></strong>
+            <input class="date-input" id="currentDateInput" type="date" />
+            <button class="date-button" type="button" id="nextDateBtn">›</button>
+            <button class="chip active" type="button" id="langZhBtn" data-lang="zh">中文</button>
+            <button class="chip" type="button" id="langEnBtn" data-lang="en">EN</button>
+          </div>
         </div>
         <div class="mom-dashboard" id="momDashboard">
           <div class="dashboard-grid">
             <div class="dashboard-card feedback-alert">
-              <span class="dashboard-label">未读私密反馈</span>
+              <span class="dashboard-label">未读私密反馈 <span class="red-dot" id="feedbackUnreadDot" hidden>0</span></span>
               <b class="dashboard-number" id="unreadFeedbackCount">0</b>
               <span class="dashboard-note" id="latestFeedbackText">暂无新的私密反馈</span>
             </div>
