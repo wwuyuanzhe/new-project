@@ -500,6 +500,10 @@
       color: #fff;
     }
 
+    .task-toolbar .chip {
+      flex: 0 0 auto;
+    }
+
     .tasks {
       padding: 16px;
       display: grid;
@@ -1546,11 +1550,17 @@
       }
 
       .task-toolbar {
-        padding: 10px;
-        gap: 8px;
+        position: relative;
+        padding: 8px 12px 12px;
+        gap: 6px;
         overflow-x: auto;
         flex-wrap: nowrap;
+        scroll-snap-type: x proximity;
         scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.84), rgba(255, 255, 255, 0.58));
+        mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 18px), transparent 100%);
+        -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 18px), transparent 100%);
       }
 
       .mode-tabs {
@@ -1572,7 +1582,33 @@
 
       .chip {
         min-width: max-content;
-        min-height: 38px;
+      }
+
+      .task-toolbar .chip {
+        min-height: 32px;
+        border-radius: 999px;
+        padding: 0 12px;
+        font-size: 13px;
+        font-weight: 820;
+        box-shadow: none;
+        background: rgba(255, 255, 255, 0.72);
+        border-color: rgba(18, 24, 31, 0.08);
+        scroll-snap-align: start;
+      }
+
+      .task-toolbar .chip.active {
+        background: #111827;
+        border-color: #111827;
+        color: #fff;
+        box-shadow: 0 8px 18px rgba(17, 24, 39, 0.16);
+      }
+
+      .task-toolbar .chip[data-range] {
+        background: rgba(239, 242, 247, 0.86);
+      }
+
+      .task-toolbar .chip[data-range].active {
+        background: #111827;
       }
 
       .tasks {
