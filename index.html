@@ -162,8 +162,69 @@
 
     .auth-form {
       display: grid;
-      gap: 12px;
+      gap: 14px;
       padding: 14px;
+    }
+
+    .auth-sheet-panel {
+      overflow: hidden;
+    }
+
+    .sheet-grabber {
+      width: 42px;
+      height: 5px;
+      margin: 10px auto 6px;
+      border-radius: 999px;
+      background: rgba(17, 24, 39, 0.18);
+    }
+
+    .auth-title {
+      display: grid;
+      gap: 6px;
+      padding: 0 18px 14px;
+      text-align: left;
+    }
+
+    .auth-title h2 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.18;
+      font-weight: 880;
+      letter-spacing: 0;
+    }
+
+    .auth-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 620;
+    }
+
+    .auth-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      background: rgba(247, 248, 250, 0.78);
+      box-shadow: var(--glow);
+    }
+
+    .auth-card .field {
+      gap: 7px;
+    }
+
+    .auth-card select,
+    .auth-card input {
+      min-height: 48px;
+      background: rgba(255, 255, 255, 0.92);
+      border-color: rgba(18, 24, 31, 0.08);
+      font-size: 16px;
+    }
+
+    .auth-submit {
+      min-height: 50px;
     }
 
     .layout {
@@ -1064,6 +1125,11 @@
       background: rgba(15, 23, 42, 0.28);
     }
 
+    #authSheet .member-sheet-backdrop {
+      background: rgba(15, 23, 42, 0.2);
+      backdrop-filter: blur(5px);
+    }
+
     .member-sheet-panel {
       position: absolute;
       left: 50%;
@@ -1077,6 +1143,14 @@
       border: 1px solid rgba(255, 255, 255, 0.8);
       box-shadow: 0 24px 70px rgba(15, 23, 42, 0.2), var(--glow);
       backdrop-filter: blur(24px) saturate(1.25);
+    }
+
+    #authSheet .member-sheet-panel {
+      width: min(430px, calc(100vw - 22px));
+      max-height: min(620px, calc(100vh - 28px));
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 18px 60px rgba(15, 23, 42, 0.22), var(--glow);
     }
 
     .add-result-list {
@@ -1481,6 +1555,11 @@
         background: rgba(15, 23, 42, 0.28);
       }
 
+      #authSheet .member-sheet-backdrop {
+        background: rgba(15, 23, 42, 0.18);
+        backdrop-filter: blur(6px);
+      }
+
       .member-sheet-panel {
         position: absolute;
         left: 10px;
@@ -1498,12 +1577,35 @@
       }
 
       #authSheet .member-sheet-panel {
-        bottom: 18px;
+        left: 8px;
+        right: 8px;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        width: auto;
+        max-height: calc(100vh - 22px);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      #authSheet .panel-head {
+        display: none;
+      }
+
+      .auth-title {
+        padding: 0 16px 12px;
+      }
+
+      .auth-title h2 {
+        font-size: 21px;
       }
 
       .auth-form,
       .reassign-form {
         padding: 14px;
+      }
+
+      #authSheet .auth-form {
+        padding: 0 14px 14px;
+        gap: 12px;
       }
 
       .sheet-member-list {
@@ -2016,20 +2118,27 @@
 
     <div class="member-sheet" id="authSheet" hidden>
       <div class="member-sheet-backdrop"></div>
-      <div class="member-sheet-panel">
+      <div class="member-sheet-panel auth-sheet-panel">
+        <div class="sheet-grabber" aria-hidden="true"></div>
+        <div class="auth-title">
+          <h2>确认身份</h2>
+          <p>选择你的名字，输入家庭验证码后进入对应页面。</p>
+        </div>
         <div class="panel-head">
           <h2>确认身份</h2>
         </div>
         <form class="auth-form" id="authForm">
-          <div class="field">
-            <label for="authUser">使用人</label>
-            <select id="authUser"></select>
+          <div class="auth-card">
+            <div class="field">
+              <label for="authUser">使用人</label>
+              <select id="authUser"></select>
+            </div>
+            <div class="field">
+              <label for="authPin">验证码</label>
+              <input id="authPin" inputmode="numeric" autocomplete="one-time-code" placeholder="输入家庭验证码" />
+            </div>
           </div>
-          <div class="field">
-            <label for="authPin">验证码</label>
-            <input id="authPin" inputmode="numeric" autocomplete="one-time-code" placeholder="输入家庭验证码" />
-          </div>
-          <button class="primary" type="submit">进入</button>
+          <button class="primary auth-submit" type="submit">进入</button>
           <div class="helper-text">家庭内部轻量身份确认：妈妈和陈管家可管理，孩子可添加，执行人员只处理自己的任务。</div>
         </form>
       </div>
