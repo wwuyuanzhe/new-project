@@ -1407,13 +1407,24 @@
         left: 10px;
         right: 10px;
         bottom: 10px;
+        width: auto;
         max-height: 74vh;
         overflow: auto;
+        transform: none;
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.96);
         border: 1px solid rgba(18, 24, 31, 0.1);
         box-shadow: 0 24px 70px rgba(22, 28, 35, 0.24), var(--glow);
         backdrop-filter: blur(24px) saturate(1.35);
+      }
+
+      #authSheet .member-sheet-panel {
+        bottom: 18px;
+      }
+
+      .auth-form,
+      .reassign-form {
+        padding: 14px;
       }
 
       .sheet-member-list {
