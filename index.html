@@ -1067,6 +1067,18 @@
       flex-wrap: wrap;
     }
 
+    .sheet-actions {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px 16px;
+      border-top: 1px solid var(--line);
+      background: rgba(247, 248, 250, 0.52);
+    }
+
+    .sheet-actions .action {
+      flex: 1;
+    }
+
     .worker-today {
       padding: 16px;
       display: grid;
@@ -2010,10 +2022,6 @@
             </div>
           </div>
           <div class="dashboard-list" id="momFocusList"></div>
-          <div class="dashboard-actions">
-            <button class="action" type="button" id="showFeedbackBtn">查看反馈</button>
-            <button class="action" type="button" id="markFeedbackReadBtn">标记反馈已读</button>
-          </div>
         </div>
         <div class="panel-head">
           <h2>总览</h2>
@@ -2058,6 +2066,7 @@
           <button class="action" type="button" id="closeOverviewSheet">关闭</button>
         </div>
         <div class="notice-list" id="overviewSheetContent"></div>
+        <div class="sheet-actions" id="overviewSheetActions" hidden></div>
       </div>
     </div>
 
@@ -4177,8 +4186,11 @@
     function openTaskSummary(title, tasks, options = {}) {
       const sheet = document.getElementById("overviewSheet");
       const content = document.getElementById("overviewSheetContent");
+      const actions = document.getElementById("overviewSheetActions");
       document.getElementById("overviewSheetTitle").textContent = title;
       content.innerHTML = "";
+      actions.hidden = true;
+      actions.innerHTML = "";
       if (!tasks.length) {
         content.innerHTML = `<div class="empty">这里暂时没有事项。</div>`;
       } else if (options.groupByPerson) {
@@ -4211,12 +4223,8 @@
       const dot = document.getElementById("feedbackUnreadDot");
       const canSee = state.selectedMember === "all" && isManagerUser();
       const feedbackCard = document.querySelector(".dashboard-card.feedback-alert");
-      const feedbackActions = document.querySelector(".dashboard-actions");
-      const markFeedbackReadBtn = document.getElementById("markFeedbackReadBtn");
       dashboard.style.display = canSee ? "" : "none";
-      if (feedbackCard) feedbackCard.hidden = true;
-      if (feedbackActions) feedbackActions.hidden = !canSeeMomFeedback();
-      if (markFeedbackReadBtn) markFeedbackReadBtn.hidden = true;
+      if (feedbackCard) feedbackCard.hidden = !canSeeMomFeedback();
       dot.hidden = true;
       if (!canSee) return;
 
@@ -4232,17 +4240,19 @@
         })
         .sort((a, b) => a.time.localeCompare(b.time))
         .slice(0, 3);
-      const unread = unreadFeedbacks();
+      const unread = canSeeMomFeedback() ? unreadFeedbacks() : [];
 
       document.getElementById("dayTotalLabel").textContent = `${selectedDateLabel()}全部事项`;
       document.getElementById("dayOpenLabel").textContent = `${selectedDateLabel()}未完成`;
-      document.getElementById("unreadFeedbackCount").textContent = unread.length;
+      document.getElementById("unreadFeedbackCount").textContent = canSeeMomFeedback() ? unread.length : "";
       document.getElementById("todayIssueCount").textContent = tasks.length;
       document.getElementById("todayOpenCount").textContent = openTasks.length;
       document.getElementById("upcomingCount").textContent = upcoming.length;
       dot.textContent = unread.length;
-      dot.hidden = true;
-      document.getElementById("latestFeedbackText").textContent = "只在妈妈的反馈页显示";
+      dot.hidden = !canSeeMomFeedback() || unread.length === 0;
+      document.getElementById("latestFeedbackText").textContent = canSeeMomFeedback() && state.feedbacks.length
+        ? `${unread.length} 条未读，点这里查看`
+        : canSeeMomFeedback() ? "暂无新的反馈" : "";
       document.getElementById("todayIssueText").textContent = tasks.length
         ? `上午 ${tasks.filter(task => timeToMinutes(task.time || "09:00") < 12 * 60).length} / 下午 ${tasks.filter(task => timeToMinutes(task.time || "09:00") >= 12 * 60 && timeToMinutes(task.time || "09:00") < 18 * 60).length} / 晚上 ${tasks.filter(task => timeToMinutes(task.time || "09:00") >= 18 * 60).length}`
         : `${selectedDateLabel()}暂无事项`;
@@ -4292,14 +4302,23 @@
       document.querySelector(".dashboard-card.alert").onclick = () => {
         openTaskSummary(`${selectedDateLabel()}全部事项`, tasks, { groupByPerson: true });
       };
+      if (feedbackCard && canSeeMomFeedback()) {
+        feedbackCard.onclick = () => openFeedbackSummary(unread.length ? unread : state.feedbacks);
+      }
     }
 
     function openFeedbackSummary(feedbacks) {
       if (!canSeeMomFeedback()) return;
       const sheet = document.getElementById("overviewSheet");
       const content = document.getElementById("overviewSheetContent");
+      const actions = document.getElementById("overviewSheetActions");
       document.getElementById("overviewSheetTitle").textContent = "给妈妈的反馈";
       content.innerHTML = "";
+      actions.hidden = false;
+      actions.innerHTML = `
+        <button class="action" type="button" id="sheetMarkFeedbackReadBtn">标记反馈已读</button>
+        <button class="action" type="button" id="sheetCloseFeedbackBtn">关闭</button>
+      `;
       if (!feedbacks.length) {
         content.innerHTML = `<div class="empty">暂无给妈妈的反馈。</div>`;
       } else {
@@ -4310,6 +4329,15 @@
           content.appendChild(item);
         });
       }
+      document.getElementById("sheetMarkFeedbackReadBtn").addEventListener("click", () => {
+        state.feedbackReadAt = Date.now();
+        save();
+        render();
+        openFeedbackSummary(state.feedbacks);
+      });
+      document.getElementById("sheetCloseFeedbackBtn").addEventListener("click", () => {
+        sheet.hidden = true;
+      });
       sheet.hidden = false;
     }
 
@@ -4613,21 +4641,6 @@
 
     document.getElementById("generateAllBtn").addEventListener("click", generateAllRoutines);
 
-    document.getElementById("showFeedbackBtn").addEventListener("click", () => {
-      if (!canSeeMomFeedback()) return;
-      state.selectedMember = "mom";
-      state.actionMode = "natural";
-      render();
-      document.getElementById("privateFeedbackHead").scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-
-    document.getElementById("markFeedbackReadBtn").addEventListener("click", () => {
-      if (!canSeeMomFeedback()) return;
-      state.feedbackReadAt = Date.now();
-      save();
-      render();
-    });
-
     document.getElementById("mobileNav").addEventListener("click", event => {
       const button = event.target.closest("button[data-mobile-tab]");
       if (!button) return;
@@ -4651,13 +4664,15 @@
       document.getElementById("memberSheet").hidden = true;
     });
 
-    document.getElementById("closeOverviewSheet").addEventListener("click", () => {
-      document.getElementById("overviewSheet").hidden = true;
-    });
+      document.getElementById("closeOverviewSheet").addEventListener("click", () => {
+        document.getElementById("overviewSheet").hidden = true;
+        document.getElementById("overviewSheetActions").hidden = true;
+      });
 
-    document.getElementById("overviewSheetBackdrop").addEventListener("click", () => {
-      document.getElementById("overviewSheet").hidden = true;
-    });
+      document.getElementById("overviewSheetBackdrop").addEventListener("click", () => {
+        document.getElementById("overviewSheet").hidden = true;
+        document.getElementById("overviewSheetActions").hidden = true;
+      });
 
     document.getElementById("closeReassignSheet").addEventListener("click", closeReassignSheet);
 
