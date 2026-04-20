@@ -916,6 +916,16 @@
       order: -1;
     }
 
+    .mobile-nav,
+    .member-sheet {
+      display: none;
+    }
+
+    .add-result-list {
+      border-top: 1px solid var(--line);
+      background: rgba(247, 248, 250, 0.45);
+    }
+
     .notice {
       border-radius: 8px;
       padding: 12px;
@@ -1020,36 +1030,38 @@
     @media (max-width: 760px) {
       body {
         background: linear-gradient(180deg, #fbfbfd 0%, #eef2f7 100%);
+        padding-bottom: 86px;
       }
 
       .app {
-        padding: 12px;
+        padding: 12px 12px 0;
       }
 
       .topbar {
-        display: grid;
-        gap: 12px;
-        padding: 8px 0 14px;
+        display: block;
+        padding: 6px 0 12px;
       }
 
       .brand h1 {
-        font-size: 26px;
+        font-size: 22px;
         line-height: 1.2;
       }
 
       .brand p {
-        font-size: 14px;
+        display: none;
       }
 
       .date-pill {
-        width: 100%;
+        width: 228px;
+        margin-top: 8px;
         display: grid;
-        grid-template-columns: 36px minmax(0, 1fr) 36px;
+        grid-template-columns: 28px minmax(0, 1fr) 28px;
         justify-content: stretch;
-        min-height: 38px;
-        padding: 8px;
-        gap: 7px;
+        min-height: 32px;
+        padding: 6px;
+        gap: 5px;
         white-space: normal;
+        font-size: 12px;
       }
 
       #prevDateBtn {
@@ -1075,16 +1087,19 @@
       #currentDateInput {
         grid-column: 1 / -1;
         grid-row: 2;
+        display: none;
       }
 
       #langZhBtn {
         grid-column: 1 / 3;
         grid-row: 3;
+        display: none;
       }
 
       #langEnBtn {
         grid-column: 3;
         grid-row: 3;
+        display: none;
       }
 
       .date-pill .chip {
@@ -1099,8 +1114,8 @@
       }
 
       .date-button {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
       }
 
       .layout {
@@ -1115,7 +1130,36 @@
       }
 
       .right {
-        order: -1;
+        order: 0;
+      }
+
+      body.mobile-tab-overview #overviewPanel,
+      body.mobile-tab-add #quickPanel,
+      body.mobile-tab-add #routinePanel,
+      body.mobile-tab-member #taskPanel,
+      body.mobile-tab-member #workerTodayPanel {
+        display: block !important;
+      }
+
+      body.mobile-tab-overview #memberPanel,
+      body.mobile-tab-overview .main,
+      body.mobile-tab-add #memberPanel,
+      body.mobile-tab-add #overviewPanel,
+      body.mobile-tab-add #taskPanel,
+      body.mobile-tab-add #workerTodayPanel,
+      body.mobile-tab-member #memberPanel,
+      body.mobile-tab-member #overviewPanel,
+      body.mobile-tab-member #quickPanel,
+      body.mobile-tab-member #routinePanel {
+        display: none !important;
+      }
+
+      body.mobile-tab-member .layout.simple-worker-mode #taskPanel {
+        display: none !important;
+      }
+
+      body.mobile-tab-member .layout:not(.simple-worker-mode) #workerTodayPanel {
+        display: none !important;
       }
 
       .panel {
@@ -1171,6 +1215,71 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      .mobile-nav {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        z-index: 30;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        padding: 7px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(18, 24, 31, 0.1);
+        box-shadow: 0 16px 42px rgba(22, 28, 35, 0.18), var(--glow);
+        backdrop-filter: blur(24px) saturate(1.35);
+      }
+
+      .mobile-nav button {
+        min-height: 44px;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        font-weight: 900;
+      }
+
+      .mobile-nav button.active {
+        background: #111827;
+        color: #fff;
+      }
+
+      .member-sheet {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        display: block;
+      }
+
+      .member-sheet[hidden] {
+        display: none;
+      }
+
+      .member-sheet-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.28);
+      }
+
+      .member-sheet-panel {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        max-height: 74vh;
+        overflow: auto;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(18, 24, 31, 0.1);
+        box-shadow: 0 24px 70px rgba(22, 28, 35, 0.24), var(--glow);
+        backdrop-filter: blur(24px) saturate(1.35);
+      }
+
+      .sheet-member-list {
+        max-height: none;
       }
 
       .member-button .count {
@@ -1345,7 +1454,7 @@
     </header>
 
     <div class="layout">
-      <aside class="panel">
+      <aside class="panel" id="memberPanel">
         <div class="panel-head">
           <h2>家里的人</h2>
         </div>
@@ -1442,6 +1551,7 @@
               <button class="primary" type="submit">发给妈妈</button>
             </form>
           </div>
+          <div class="notice-list add-result-list" id="addResultList"></div>
         </section>
 
         <section class="panel" id="routinePanel">
@@ -1452,6 +1562,10 @@
             </div>
           </div>
           <form class="routine-editor" id="routineForm">
+            <div class="field">
+              <label for="routineAssignee">给谁</label>
+              <select id="routineAssignee"></select>
+            </div>
             <div class="field">
               <label for="routineName">日常事项</label>
               <input id="routineName" placeholder="例如：大客厅整理" />
@@ -1473,7 +1587,7 @@
           <div class="routine-list" id="routineList"></div>
         </section>
 
-        <section class="panel">
+        <section class="panel" id="taskPanel">
           <div class="panel-head">
             <h2 id="taskPanelTitle">今天任务</h2>
             <div class="view-switch" id="viewSwitch">
@@ -1492,7 +1606,7 @@
         </section>
       </main>
 
-      <aside class="panel right">
+      <aside class="panel right" id="overviewPanel">
         <div class="panel-head">
           <h2>妈妈今日重点 <span class="red-dot" id="feedbackUnreadDot" hidden>0</span></h2>
         </div>
@@ -1558,6 +1672,23 @@
         </div>
         <div class="notice-list" id="privateFeedbackList"></div>
       </aside>
+    </div>
+
+    <nav class="mobile-nav" id="mobileNav" aria-label="手机底部导航">
+      <button type="button" data-mobile-tab="overview" class="active">总览</button>
+      <button type="button" data-mobile-tab="add">添加</button>
+      <button type="button" data-mobile-tab="member">成员</button>
+    </nav>
+
+    <div class="member-sheet" id="memberSheet" hidden>
+      <div class="member-sheet-backdrop" id="memberSheetBackdrop"></div>
+      <div class="member-sheet-panel">
+        <div class="panel-head">
+          <h2>选择成员</h2>
+          <button class="action" type="button" id="closeMemberSheet">关闭</button>
+        </div>
+        <div class="member-list sheet-member-list" id="memberSheetList"></div>
+      </div>
     </div>
   </div>
 
@@ -1677,6 +1808,7 @@
       rangeMode: "day",
       filter: "all",
       viewMode: "list",
+      mobileTab: "overview",
       actionMode: "natural",
       editingRoutineIndex: null,
       tasks: loadTasks(),
@@ -1961,12 +2093,22 @@
 
     function renderMembers() {
       const list = document.getElementById("memberList");
+      const sheetList = document.getElementById("memberSheetList");
       list.innerHTML = "";
+      sheetList.innerHTML = "";
       members.forEach(member => {
         const tasks = member.id === "all"
           ? state.tasks.filter(task => dateInRange(task.date || todayISO()))
           : state.tasks.filter(task => task.assignee === member.id && dateInRange(task.date || todayISO()));
         const openCount = tasks.filter(task => task.status !== "done").length;
+        const button = createMemberButton(member, openCount);
+        const sheetButton = createMemberButton(member, openCount);
+        list.appendChild(button);
+        sheetList.appendChild(sheetButton);
+      });
+    }
+
+    function createMemberButton(member, openCount) {
         const button = document.createElement("button");
         button.className = `member-button ${member.manager ? "manager" : ""} ${state.selectedMember === member.id ? "active" : ""}`;
         button.type = "button";
@@ -1981,16 +2123,17 @@
         `;
         button.addEventListener("click", () => {
           state.selectedMember = member.id;
+          state.mobileTab = member.id === "all" || member.id === "mom" ? "overview" : "member";
+          document.getElementById("memberSheet").hidden = true;
           resetRoutineForm();
           render();
           if (isSimpleWorker(member.id)) window.scrollTo({ top: 0, behavior: "smooth" });
         });
-        list.appendChild(button);
-      });
+        return button;
     }
 
     function renderAssignees() {
-      const selects = [document.getElementById("schedulePerson")].filter(Boolean);
+      const selects = [document.getElementById("schedulePerson"), document.getElementById("routineAssignee")].filter(Boolean);
       selects.forEach(select => {
         select.innerHTML = "";
       members.filter(member => member.id !== "all").forEach(member => {
@@ -2023,17 +2166,26 @@
     function renderComposerContext() {
       const schedulePerson = document.getElementById("schedulePerson");
       const scheduleDate = document.getElementById("scheduleDate");
+      const routineAssignee = document.getElementById("routineAssignee");
       const title = document.getElementById("quickPanelTitle");
       if (scheduleDate && !scheduleDate.value) {
         scheduleDate.value = state.selectedDate;
       }
       if (state.selectedMember !== "all") {
         schedulePerson.value = state.selectedMember;
+        if (routineAssignee) routineAssignee.value = state.selectedMember;
         title.textContent = `${memberById(state.selectedMember).name}的快速处理`;
       } else {
         schedulePerson.value = "mom";
+        if (routineAssignee && !routineAssignee.value) routineAssignee.value = "helperA";
         title.textContent = "快速处理";
       }
+    }
+
+    function currentRoutineOwner() {
+      const select = document.getElementById("routineAssignee");
+      if (state.mobileTab === "add" && select) return select.value || "helperA";
+      return state.selectedMember;
     }
 
     function resetRoutineForm() {
@@ -2093,10 +2245,11 @@
       const list = document.getElementById("routineList");
       const form = document.getElementById("routineForm");
       const generateAll = document.getElementById("generateAllBtn");
-      const selected = memberById(state.selectedMember);
-      const routines = dailyRoutines[state.selectedMember] || [];
+      const ownerId = currentRoutineOwner();
+      const selected = memberById(ownerId);
+      const routines = dailyRoutines[ownerId] || [];
 
-      if (state.selectedMember === "all") {
+      if (state.selectedMember === "all" && state.mobileTab !== "add") {
         title.textContent = "每日固定事项";
         form.style.display = "none";
         generateAll.style.display = "";
@@ -2129,7 +2282,7 @@
             <button class="action danger" type="button" data-action="delete">删除</button>
           </div>
         `;
-        card.querySelector('[data-action="add"]').addEventListener("click", () => addRoutineTask(state.selectedMember, routine));
+        card.querySelector('[data-action="add"]').addEventListener("click", () => addRoutineTask(ownerId, routine));
         card.querySelector('[data-action="edit"]').addEventListener("click", () => editRoutine(index));
         card.querySelector('[data-action="delete"]').addEventListener("click", () => deleteRoutine(index));
         list.appendChild(card);
@@ -2137,7 +2290,8 @@
     }
 
     function editRoutine(index) {
-      const routine = dailyRoutines[state.selectedMember][index];
+      const ownerId = currentRoutineOwner();
+      const routine = dailyRoutines[ownerId][index];
       state.editingRoutineIndex = index;
       document.getElementById("routineName").value = routine.title;
       document.getElementById("routineTime").value = routine.time;
@@ -2147,7 +2301,8 @@
     }
 
     function deleteRoutine(index) {
-      dailyRoutines[state.selectedMember].splice(index, 1);
+      const ownerId = currentRoutineOwner();
+      dailyRoutines[ownerId].splice(index, 1);
       resetRoutineForm();
       save();
       render();
@@ -3033,6 +3188,32 @@
       });
     }
 
+    function renderAddResult() {
+      const list = document.getElementById("addResultList");
+      if (!list) return;
+      const recent = state.notices.slice(0, 5);
+      list.innerHTML = "";
+      if (!recent.length) {
+        list.innerHTML = `<div class="empty">添加、删除和反馈后的结果会显示在这里。</div>`;
+        return;
+      }
+      recent.forEach(notice => {
+        const item = document.createElement("div");
+        item.className = "notice";
+        item.textContent = `${notice.time}  ${notice.text}`;
+        list.appendChild(item);
+      });
+    }
+
+    function renderMobileShell() {
+      document.body.classList.toggle("mobile-tab-overview", state.mobileTab === "overview");
+      document.body.classList.toggle("mobile-tab-add", state.mobileTab === "add");
+      document.body.classList.toggle("mobile-tab-member", state.mobileTab === "member");
+      document.querySelectorAll("[data-mobile-tab]").forEach(button => {
+        button.classList.toggle("active", button.dataset.mobileTab === state.mobileTab);
+      });
+    }
+
     function renderFilters() {
       document.querySelectorAll(".chip").forEach(button => {
         if (button.dataset.range) {
@@ -3069,6 +3250,8 @@
         renderMomDashboard();
         renderNotices();
         renderPrivateFeedback();
+        renderAddResult();
+        renderMobileShell();
         renderNaturalContext();
       } catch (error) {
         const list = document.getElementById("taskList");
@@ -3153,7 +3336,8 @@
 
     document.getElementById("routineForm").addEventListener("submit", event => {
       event.preventDefault();
-      if (state.selectedMember === "all") return;
+      const ownerId = currentRoutineOwner();
+      if (ownerId === "all") return;
       const title = document.getElementById("routineName").value.trim();
       if (!title) return;
       const location = document.getElementById("routineLocation").value;
@@ -3163,13 +3347,13 @@
         location,
         prep: document.getElementById("routinePrep").value.trim() || suggestPrep(title, location)
       };
-      if (!dailyRoutines[state.selectedMember]) {
-        dailyRoutines[state.selectedMember] = [];
+      if (!dailyRoutines[ownerId]) {
+        dailyRoutines[ownerId] = [];
       }
       if (state.editingRoutineIndex === null) {
-        dailyRoutines[state.selectedMember].push(routine);
+        dailyRoutines[ownerId].push(routine);
       } else {
-        dailyRoutines[state.selectedMember][state.editingRoutineIndex] = routine;
+        dailyRoutines[ownerId][state.editingRoutineIndex] = routine;
       }
       resetRoutineForm();
       save();
@@ -3193,6 +3377,11 @@
       }
     });
 
+    document.getElementById("routineAssignee").addEventListener("change", () => {
+      state.editingRoutineIndex = null;
+      render();
+    });
+
     document.getElementById("generateAllBtn").addEventListener("click", generateAllRoutines);
 
     document.getElementById("showFeedbackBtn").addEventListener("click", () => {
@@ -3206,6 +3395,27 @@
       state.feedbackReadAt = Date.now();
       save();
       render();
+    });
+
+    document.getElementById("mobileNav").addEventListener("click", event => {
+      const button = event.target.closest("button[data-mobile-tab]");
+      if (!button) return;
+      if (button.dataset.mobileTab === "member") {
+        document.getElementById("memberSheet").hidden = false;
+        return;
+      }
+      state.mobileTab = button.dataset.mobileTab;
+      if (state.mobileTab === "overview") state.selectedMember = "all";
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    document.getElementById("closeMemberSheet").addEventListener("click", () => {
+      document.getElementById("memberSheet").hidden = true;
+    });
+
+    document.getElementById("memberSheetBackdrop").addEventListener("click", () => {
+      document.getElementById("memberSheet").hidden = true;
     });
 
     document.getElementById("actionTabs").addEventListener("click", event => {
