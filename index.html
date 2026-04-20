@@ -126,6 +126,35 @@
       font-weight: 700;
     }
 
+    .identity-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .identity-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 0 11px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: var(--glow);
+    }
+
+    .auth-form {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
     .layout {
       display: grid;
       grid-template-columns: 250px minmax(0, 1fr) 340px;
@@ -998,6 +1027,34 @@
       display: none;
     }
 
+    .member-sheet:not([hidden]) {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: block;
+    }
+
+    .member-sheet-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.28);
+    }
+
+    .member-sheet-panel {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      width: min(560px, calc(100vw - 24px));
+      max-height: 82vh;
+      overflow: auto;
+      transform: translateX(-50%);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.2), var(--glow);
+      backdrop-filter: blur(24px) saturate(1.25);
+    }
+
     .add-result-list {
       border-top: 1px solid var(--line);
       background: rgba(247, 248, 250, 0.45);
@@ -1126,6 +1183,10 @@
 
       .brand p {
         display: none;
+      }
+
+      .identity-bar {
+        justify-content: flex-start;
       }
 
       .date-pill {
@@ -1519,6 +1580,9 @@
       <div class="brand">
         <h1>我们家的小助手</h1>
         <p>家里今天要做的事，一眼就看明白。</p>
+        <div class="identity-bar">
+          <button class="identity-pill" type="button" id="switchUserBtn">当前身份：未确认</button>
+        </div>
       </div>
       <div class="date-pill" aria-label="今天日期">
         <button class="date-button" type="button" id="prevDateBtn">‹</button>
@@ -1771,12 +1835,8 @@
         </div>
         <form class="reassign-form" id="reassignForm">
           <div class="field">
-            <label for="reassignTitle">事项</label>
-            <input id="reassignTitle" />
-          </div>
-          <div class="field">
-            <label for="reassignAssignees">分配给谁（可多选）</label>
-            <select id="reassignAssignees" multiple></select>
+            <label for="reassignPeople">谁的日程（可多选）</label>
+            <select id="reassignPeople" multiple></select>
           </div>
           <div class="reassign-grid">
             <div class="field">
@@ -1789,10 +1849,57 @@
             </div>
           </div>
           <div class="field">
+            <label for="reassignTitle">描述事项</label>
+            <input id="reassignTitle" />
+          </div>
+          <div class="field">
             <label for="reassignLocation">地点</label>
             <select id="reassignLocation"></select>
           </div>
+          <div class="reassign-grid">
+            <div class="field">
+              <label for="reassignRide">接送</label>
+              <select id="reassignRide">
+                <option value="no">不需要，单独事项</option>
+                <option value="yes">需要接送</option>
+                <option value="dropoff">只送去</option>
+                <option value="pickup">只接回</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="reassignDriver">接送人</label>
+              <select id="reassignDriver">
+                <option value="driver">陈管家</option>
+                <option value="driverLei">司机阿磊</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="reassignExecutors">执行人（可多选）</label>
+            <select id="reassignExecutors" multiple></select>
+          </div>
           <button class="primary" type="submit">确认分配</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="member-sheet" id="authSheet" hidden>
+      <div class="member-sheet-backdrop"></div>
+      <div class="member-sheet-panel">
+        <div class="panel-head">
+          <h2>确认身份</h2>
+        </div>
+        <form class="auth-form" id="authForm">
+          <div class="field">
+            <label for="authUser">使用人</label>
+            <select id="authUser"></select>
+          </div>
+          <div class="field">
+            <label for="authPin">验证码</label>
+            <input id="authPin" inputmode="numeric" autocomplete="one-time-code" placeholder="输入家庭验证码" />
+          </div>
+          <button class="primary" type="submit">进入</button>
+          <div class="helper-text">家庭内部轻量身份确认：妈妈和陈管家可管理，孩子可添加，执行人员只处理自己的任务。</div>
         </form>
       </div>
     </div>
@@ -1816,6 +1923,23 @@
       { id: "chef", name: "齐厨师", role: "Chef", color: "#9a6a00", initials: "齐" },
       { id: "kk", name: "家庭教师 KK", role: "Tutor", color: "#6d4aaa", initials: "KK" }
     ];
+
+    const familyPins = {
+      mom: "1001",
+      driver: "1002",
+      dad: "1003",
+      daughter1: "2001",
+      daughter2: "2002",
+      son: "2003",
+      grandpa: "3001",
+      grandma: "3002",
+      helperA: "4001",
+      helperB: "4002",
+      helperC: "4003",
+      driverLei: "5001",
+      chef: "6001",
+      kk: "7001"
+    };
 
     const locations = [
       {
@@ -1918,6 +2042,7 @@
       actionMode: "natural",
       editingRoutineIndex: null,
       reassignTaskId: null,
+      currentUser: localStorage.getItem("familyCurrentUser") || "",
       tasks: loadTasks(),
       notices: JSON.parse(localStorage.getItem("familyNotices") || "[]"),
       feedbacks: JSON.parse(localStorage.getItem("familyFeedbacks") || "[]"),
@@ -1973,6 +2098,7 @@
           groupTitle: task.groupTitle || "",
           relationLabel: task.relationLabel || "",
           assignedAt: task.assignedAt || "",
+          reassignedFrom: task.reassignedFrom || "",
           prep: task.prep || suggestPrep(match ? match[1] : task.title, task.location || "none"),
           prepReminderSent: task.prepReminderSent || false
         };
@@ -2052,6 +2178,7 @@
       localStorage.setItem("familyRoutines", JSON.stringify(dailyRoutines));
       localStorage.setItem("familyFeedbacks", JSON.stringify(state.feedbacks.slice(0, 30)));
       localStorage.setItem("familyFeedbackReadAt", String(state.feedbackReadAt || 0));
+      if (state.currentUser) localStorage.setItem("familyCurrentUser", state.currentUser);
     }
 
     function notifyAssignee(assigneeId, title) {
@@ -2089,6 +2216,26 @@
 
     function memberById(id) {
       return members.find(member => member.id === id) || members[0];
+    }
+
+    function currentUser() {
+      return memberById(state.currentUser);
+    }
+
+    function isManagerUser() {
+      return ["mom", "driver"].includes(state.currentUser);
+    }
+
+    function canAddContent() {
+      return isManagerUser() || ["dad", "grandpa", "grandma", "daughter1", "daughter2", "son", "kk"].includes(state.currentUser);
+    }
+
+    function canManageTask(task) {
+      return isManagerUser();
+    }
+
+    function canOperateTask(task) {
+      return isManagerUser() || task.assignee === state.currentUser;
     }
 
     function followUpText(id) {
@@ -2198,6 +2345,7 @@
     function visibleTasks() {
       return state.tasks
         .filter(task => dateInRange(task.date || todayISO()))
+        .filter(task => isManagerUser() || task.assignee === state.currentUser)
         .filter(task => state.selectedMember === "all" || task.assignee === state.selectedMember)
         .filter(task => {
           if (state.filter === "all") return true;
@@ -2213,7 +2361,10 @@
       const sheetList = document.getElementById("memberSheetList");
       list.innerHTML = "";
       sheetList.innerHTML = "";
-      members.forEach(member => {
+      const visibleMembers = isManagerUser()
+        ? members
+        : members.filter(member => member.id === state.currentUser);
+      visibleMembers.forEach(member => {
         const tasks = member.id === "all"
           ? state.tasks.filter(task => dateInRange(task.date || todayISO()))
           : state.tasks.filter(task => task.assignee === member.id && dateInRange(task.date || todayISO()));
@@ -2250,7 +2401,7 @@
     }
 
     function renderAssignees() {
-      const selects = [document.getElementById("schedulePerson"), document.getElementById("routineAssignee"), document.getElementById("reassignAssignees")].filter(Boolean);
+      const selects = [document.getElementById("schedulePerson"), document.getElementById("routineAssignee"), document.getElementById("reassignPeople"), document.getElementById("reassignExecutors")].filter(Boolean);
       selects.forEach(select => {
         select.innerHTML = "";
       members.filter(member => member.id !== "all").forEach(member => {
@@ -2260,6 +2411,16 @@
         select.appendChild(option);
       });
       });
+      const authUser = document.getElementById("authUser");
+      if (authUser) {
+        authUser.innerHTML = "";
+        members.filter(member => member.id !== "all").forEach(member => {
+          const option = document.createElement("option");
+          option.value = member.id;
+          option.textContent = member.name;
+          authUser.appendChild(option);
+        });
+      }
     }
 
     function selectedValues(select) {
@@ -2303,6 +2464,10 @@
         setSelectedValues(schedulePerson, [state.selectedMember]);
         if (routineAssignee) routineAssignee.value = state.selectedMember;
         title.textContent = `${memberById(state.selectedMember).name}的快速处理`;
+      } else if (!isManagerUser() && state.currentUser) {
+        setSelectedValues(schedulePerson, [state.currentUser]);
+        if (routineAssignee) routineAssignee.value = state.currentUser;
+        title.textContent = `${currentUser().name}的添加内容`;
       } else {
         setSelectedValues(schedulePerson, ["mom"]);
         if (routineAssignee && !routineAssignee.value) routineAssignee.value = "helperA";
@@ -2362,8 +2527,8 @@
       const simple = isSimpleWorker(state.selectedMember);
       document.querySelector(".layout").classList.toggle("simple-worker-mode", simple);
       document.getElementById("workerTodayPanel").hidden = !simple;
-      document.getElementById("quickPanel").style.display = simple ? "none" : "";
-      document.getElementById("routinePanel").style.display = simple ? "none" : "";
+      document.getElementById("quickPanel").style.display = simple || !canAddContent() ? "none" : "";
+      document.getElementById("routinePanel").style.display = simple || !canAddContent() ? "none" : "";
       document.querySelector(".right").style.display = simple ? "none" : "";
     }
 
@@ -2531,6 +2696,7 @@
         groupTitle: task.groupTitle || "",
         relationLabel: task.relationLabel || "",
         assignedAt: "",
+        reassignedFrom: task.reassignedFrom || "",
         prep: task.prep || suggestPrep(task.title, task.location || "none"),
         prepReminderSent: false,
         status: "todo",
@@ -2539,7 +2705,7 @@
       notifyAssignee(assignee, task.title);
     }
 
-    function createTask({ title, assignee, location = "none", time = "09:00", prep, followUp = "none", date = state.selectedDate, groupId = "", groupTitle = "", relationLabel = "" }) {
+    function createTask({ title, assignee, location = "none", time = "09:00", prep, followUp = "none", date = state.selectedDate, groupId = "", groupTitle = "", relationLabel = "", reassignedFrom = "" }) {
       state.filter = "all";
       state.tasks.push({
         id: uid(),
@@ -2553,6 +2719,7 @@
         groupTitle,
         relationLabel,
         assignedAt: "",
+        reassignedFrom,
         prep: prep || suggestPrep(title, location),
         prepReminderSent: false,
         status: "todo",
@@ -3243,7 +3410,7 @@
       }
     }
 
-    function addLinkedScheduleBatch({ personIds, title, time, location, rideMode, companionIds = [], driverId = "driver", date = state.selectedDate }) {
+    function addLinkedScheduleBatch({ personIds, title, time, location, rideMode, companionIds = [], driverId = "driver", date = state.selectedDate, reassignedFrom = "" }) {
       const people = personIds.map(memberById);
       const selectedCompanions = companionIds.filter(id => id && id !== "none");
       const groupId = uid();
@@ -3264,6 +3431,7 @@
           groupId,
           groupTitle,
           relationLabel: `${person.name}本人`,
+          reassignedFrom,
           followUp,
           prep: suggestSchedulePrep(personId, title, location)
         });
@@ -3285,6 +3453,7 @@
           groupId,
           groupTitle,
           relationLabel: `${driver.name}接送`,
+          reassignedFrom,
           prep: "提前确认人数、路线、车钥匙、停车点和随身物品；接送完成后有变化再反馈。"
         });
       }
@@ -3299,15 +3468,18 @@
           groupId,
           groupTitle,
           relationLabel: `${memberById(companionId).name}执行`,
+          reassignedFrom,
           prep: `确认${peopleText}的时间、地点和需要带的物品；有变化再反馈给妈妈或陈管家。`
         });
       });
 
-      state.notices.unshift({
-        id: uid(),
-        text: `已保存「${groupTitle}」：每个人 1 条主任务，${driverId && rideMode !== "no" ? "接送已合并，" : ""}${companionText ? `跟进人是 ${companionText}。` : "未指定跟进人。"}`,
-        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
-      });
+      if (!reassignedFrom) {
+        state.notices.unshift({
+          id: uid(),
+          text: `已保存「${groupTitle}」：每个人 1 条主任务，${driverId && rideMode !== "no" ? "接送已合并，" : ""}${companionText ? `跟进人是 ${companionText}。` : "未指定跟进人。"}`,
+          time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+        });
+      }
     }
 
     function suggestSchedulePrep(personId, title, location) {
@@ -3415,6 +3587,8 @@
         const dateBadge = isWeekRange() ? `<span class="badge">${dateShortText(task.date || todayISO())}</span>` : "";
         const assignedBadge = task.assignedAt ? `<span class="badge">已分配</span>` : "";
         const relationBadges = relationSummaryBadges(task);
+        const canOperate = canOperateTask(task);
+        const canManage = canManageTask(task);
         const card = document.createElement("article");
         card.className = `task ${task.urgent ? "urgent" : ""} ${task.status} ${task.assignedAt ? "assigned" : ""}`;
         card.innerHTML = `
@@ -3435,11 +3609,11 @@
           </div>
           <div class="prep-line">${appLanguage === "en" ? "15-min prep" : "开始前 15 分钟提醒"}：${prep}</div>
           <div class="task-actions">
-            <button class="action" type="button" data-action="doing">${appLanguage === "en" ? "Start" : "开始"}</button>
-            <button class="action" type="button" data-action="done">${appLanguage === "en" ? "Done" : "完成"}</button>
-            <button class="action warn" type="button" data-action="feedback">${appLanguage === "en" ? "Feedback" : "内容反馈"}</button>
-            ${task.assignee === "driver" ? `<button class="action" type="button" data-action="assign">${task.assignedAt ? "再次分配" : "分配"}</button>` : ""}
-            <button class="action" type="button" data-action="delete">${appLanguage === "en" ? "Delete" : "删除"}</button>
+            ${canOperate ? `<button class="action" type="button" data-action="doing">${appLanguage === "en" ? "Start" : "开始"}</button>` : ""}
+            ${canOperate ? `<button class="action" type="button" data-action="done">${appLanguage === "en" ? "Done" : "完成"}</button>` : ""}
+            ${canOperate ? `<button class="action warn" type="button" data-action="feedback">${appLanguage === "en" ? "Feedback" : "内容反馈"}</button>` : ""}
+            ${canManage && task.assignee === "driver" ? `<button class="action" type="button" data-action="assign">${task.assignedAt ? "再次分配" : "分配"}</button>` : ""}
+            ${canManage ? `<button class="action" type="button" data-action="delete">${appLanguage === "en" ? "Delete" : "删除"}</button>` : ""}
           </div>
         `;
         card.querySelectorAll("button").forEach(button => {
@@ -3535,11 +3709,18 @@
 
     function openReassignSheet(task) {
       state.reassignTaskId = task.id;
+      const groupTasks = task.groupId ? state.tasks.filter(item => item.groupId === task.groupId) : [];
+      const people = groupTasks.filter(item => /本人/.test(item.relationLabel || "")).map(item => item.assignee);
+      const executors = groupTasks.filter(item => /执行|陪同|跟进/.test(item.relationLabel || "")).map(item => item.assignee);
+      const rideTask = groupTasks.find(item => /接送/.test(item.relationLabel || ""));
       document.getElementById("reassignTitle").value = task.title || "";
       document.getElementById("reassignDate").value = task.date || state.selectedDate;
       document.getElementById("reassignTime").value = task.time || "09:00";
       document.getElementById("reassignLocation").value = task.location || "none";
-      setSelectedValues(document.getElementById("reassignAssignees"), []);
+      document.getElementById("reassignRide").value = rideTask ? "yes" : "no";
+      document.getElementById("reassignDriver").value = rideTask ? rideTask.assignee : "driver";
+      setSelectedValues(document.getElementById("reassignPeople"), people.length ? people : [task.assignee]);
+      setSelectedValues(document.getElementById("reassignExecutors"), executors);
       document.getElementById("reassignSheet").hidden = false;
     }
 
@@ -3551,35 +3732,52 @@
     function submitReassignment() {
       const sourceTask = state.tasks.find(item => item.id === state.reassignTaskId);
       if (!sourceTask) return;
-      const assignees = selectedValues(document.getElementById("reassignAssignees")).filter(id => id !== "all");
-      if (!assignees.length) {
-        window.alert("请至少选择一个要分配的人。");
+      const people = selectedValues(document.getElementById("reassignPeople")).filter(id => id !== "all");
+      const executors = selectedValues(document.getElementById("reassignExecutors")).filter(id => id !== "all");
+      if (!people.length && !executors.length) {
+        window.alert("请至少选择一个日程人员或执行人。");
         return;
       }
       const title = document.getElementById("reassignTitle").value.trim() || sourceTask.title;
       const date = document.getElementById("reassignDate").value || sourceTask.date || state.selectedDate;
       const time = document.getElementById("reassignTime").value || sourceTask.time || "09:00";
       const location = document.getElementById("reassignLocation").value || sourceTask.location || "none";
-      const groupId = assignees.length > 1 ? uid() : sourceTask.groupId;
-      const groupTitle = assignees.length > 1 ? `重新分配：${title}` : sourceTask.groupTitle;
-      assignees.forEach(assignee => {
-        createTask({
+      state.tasks = state.tasks.filter(task => task.reassignedFrom !== sourceTask.id);
+      if (people.length) {
+        addLinkedScheduleBatch({
+          personIds: people,
           title,
-          assignee,
           date,
-          location,
           time,
-          followUp: sourceTask.followUp || "none",
-          groupId,
-          groupTitle,
-          relationLabel: `${memberById(assignee).name}执行`,
-          prep: sourceTask.prep || suggestPrep(title, location)
+          location,
+          rideMode: document.getElementById("reassignRide").value,
+          driverId: document.getElementById("reassignDriver").value,
+          companionIds: executors.length ? executors : ["none"],
+          reassignedFrom: sourceTask.id
         });
-      });
+      } else {
+        const groupId = executors.length > 1 ? uid() : sourceTask.groupId;
+        const groupTitle = executors.length > 1 ? `重新分配：${title}` : sourceTask.groupTitle;
+        executors.forEach(assignee => {
+          createTask({
+            title,
+            assignee,
+            date,
+            location,
+            time,
+            followUp: sourceTask.followUp || "none",
+            groupId,
+            groupTitle,
+            relationLabel: `${memberById(assignee).name}执行`,
+            reassignedFrom: sourceTask.id,
+            prep: sourceTask.prep || suggestPrep(title, location)
+          });
+        });
+      }
       sourceTask.assignedAt = new Date().toISOString();
       state.notices.unshift({
         id: uid(),
-        text: `陈管家已分配「${title}」给 ${assignees.map(id => memberById(id).name).join("、")}，时间 ${dateShortText(date)} ${time}。`,
+        text: `陈管家已重新分配「${title}」，旧分配已替换，时间 ${dateShortText(date)} ${time}。`,
         time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
       });
       closeReassignSheet();
@@ -3745,7 +3943,7 @@
     function renderMomDashboard() {
       const dashboard = document.getElementById("momDashboard");
       const dot = document.getElementById("feedbackUnreadDot");
-      const canSee = state.selectedMember === "all";
+      const canSee = state.selectedMember === "all" && isManagerUser();
       dashboard.style.display = canSee ? "" : "none";
       dot.hidden = !canSee;
       if (!canSee) return;
@@ -3870,7 +4068,7 @@
     function renderPrivateFeedback() {
       const head = document.getElementById("privateFeedbackHead");
       const list = document.getElementById("privateFeedbackList");
-      const canSee = state.selectedMember === "all" || state.selectedMember === "mom";
+      const canSee = isManagerUser() && (state.selectedMember === "all" || state.selectedMember === "mom");
       head.style.display = canSee ? "" : "none";
       list.style.display = canSee ? "" : "none";
       if (!canSee) return;
@@ -3905,12 +4103,32 @@
     }
 
     function renderMobileShell() {
+      if (!isManagerUser() && state.mobileTab === "overview") {
+        state.mobileTab = canAddContent() ? "add" : "member";
+      }
+      if (!canAddContent() && state.mobileTab === "add") {
+        state.mobileTab = "member";
+      }
       document.body.classList.toggle("mobile-tab-overview", state.mobileTab === "overview");
       document.body.classList.toggle("mobile-tab-add", state.mobileTab === "add");
       document.body.classList.toggle("mobile-tab-member", state.mobileTab === "member");
       document.querySelectorAll("[data-mobile-tab]").forEach(button => {
+        if (button.dataset.mobileTab === "overview") button.hidden = !isManagerUser();
+        if (button.dataset.mobileTab === "add") button.hidden = !canAddContent();
         button.classList.toggle("active", button.dataset.mobileTab === state.mobileTab);
       });
+    }
+
+    function renderIdentity() {
+      const user = state.currentUser ? currentUser() : null;
+      document.getElementById("switchUserBtn").textContent = user
+        ? `当前身份：${user.name}${isManagerUser() ? " · 管理" : ""}`
+        : "当前身份：未确认";
+      document.getElementById("authSheet").hidden = Boolean(state.currentUser);
+      if (!state.currentUser) return;
+      if (!isManagerUser()) {
+        state.selectedMember = state.currentUser;
+      }
     }
 
     function renderFilters() {
@@ -3937,6 +4155,7 @@
       try {
         document.getElementById("todayText").textContent = selectedDateText();
         document.getElementById("currentDateInput").value = state.selectedDate;
+        renderIdentity();
         renderMembers();
         renderFilters();
         renderComposerContext();
@@ -3965,6 +4184,29 @@
     renderAssignees();
     renderLocations();
     render();
+
+    document.getElementById("switchUserBtn").addEventListener("click", () => {
+      state.currentUser = "";
+      localStorage.removeItem("familyCurrentUser");
+      document.getElementById("authPin").value = "";
+      render();
+    });
+
+    document.getElementById("authForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const userId = document.getElementById("authUser").value;
+      const pin = document.getElementById("authPin").value.trim();
+      if (familyPins[userId] !== pin) {
+        window.alert("验证码不正确，请重新输入。");
+        return;
+      }
+      state.currentUser = userId;
+      state.selectedMember = isManagerUser() ? "all" : userId;
+      state.mobileTab = isManagerUser() ? "overview" : canAddContent() ? "add" : "member";
+      document.getElementById("authPin").value = "";
+      save();
+      render();
+    });
 
     document.getElementById("currentDateInput").addEventListener("change", event => {
       state.selectedDate = event.target.value || todayISO();
@@ -4108,6 +4350,8 @@
         document.getElementById("memberSheet").hidden = false;
         return;
       }
+      if (button.dataset.mobileTab === "overview" && !isManagerUser()) return;
+      if (button.dataset.mobileTab === "add" && !canAddContent()) return;
       state.mobileTab = button.dataset.mobileTab;
       if (state.mobileTab === "overview") state.selectedMember = "all";
       render();
