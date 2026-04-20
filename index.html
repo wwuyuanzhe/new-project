@@ -460,6 +460,35 @@
       resize: vertical;
     }
 
+    .text-tool {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .text-tool:first-of-type {
+      border-top: 0;
+    }
+
+    .text-tool-grid {
+      display: grid;
+      grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(130px, 0.8fr));
+      gap: 12px;
+      align-items: end;
+    }
+
+    .text-tool textarea {
+      min-height: 142px;
+      resize: vertical;
+    }
+
+    .text-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .helper-text {
       color: var(--muted);
       font-size: 13px;
@@ -1449,6 +1478,7 @@
       body.mobile-tab-overview #overviewPanel,
       body.mobile-tab-add #quickPanel,
       body.mobile-tab-add #routinePanel,
+      body.mobile-tab-add #textExchangePanel,
       body.mobile-tab-member #taskPanel,
       body.mobile-tab-member #workerTodayPanel {
         display: block !important;
@@ -1463,7 +1493,8 @@
       body.mobile-tab-member #memberPanel,
       body.mobile-tab-member #overviewPanel,
       body.mobile-tab-member #quickPanel,
-      body.mobile-tab-member #routinePanel {
+      body.mobile-tab-member #routinePanel,
+      body.mobile-tab-member #textExchangePanel {
         display: none !important;
       }
 
@@ -1642,6 +1673,19 @@
       .quick-form {
         grid-template-columns: 1fr;
         padding: 13px;
+      }
+
+      .text-tool {
+        padding: 13px;
+      }
+
+      .text-tool-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .text-actions .action,
+      .text-actions .primary {
+        flex: 1;
       }
 
       .schedule-form {
@@ -1960,6 +2004,46 @@
             <button class="primary" type="submit">保存日常</button>
           </form>
           <div class="routine-list" id="routineList"></div>
+        </section>
+
+        <section class="panel" id="textExchangePanel">
+          <div class="panel-head">
+            <h2>文字导出/导入</h2>
+          </div>
+          <div class="text-tool">
+            <div class="text-tool-grid">
+              <div class="field">
+                <label for="exportMembers">选择成员（可多选）</label>
+                <select id="exportMembers" multiple></select>
+              </div>
+              <div class="field">
+                <label for="exportStartDate">开始日期</label>
+                <input id="exportStartDate" type="date" />
+              </div>
+              <div class="field">
+                <label for="exportEndDate">结束日期</label>
+                <input id="exportEndDate" type="date" />
+              </div>
+            </div>
+            <div class="text-actions">
+              <button class="primary" type="button" id="generateExportTextBtn">生成行程文字</button>
+              <button class="action" type="button" id="copyExportTextBtn">复制文字</button>
+            </div>
+            <textarea id="exportText" readonly placeholder="选择成员和日期后，点“生成行程文字”。"></textarea>
+          </div>
+          <div class="text-tool">
+            <div class="field">
+              <label for="importText">粘贴文字批量导入</label>
+              <textarea id="importText" placeholder="每行一个事项，例如：
+[2026-04-22 15:00] Aron：网球课｜地点：九龙塘｜执行人：服务员 A
+明天 20点 妈妈、Angela、Alisa、Aron 去音乐会，陈管家送，服务员A、B陪同"></textarea>
+            </div>
+            <div class="text-actions">
+              <button class="primary" type="button" id="importTextBtn">批量导入事项</button>
+              <button class="action" type="button" id="clearImportTextBtn">清空</button>
+            </div>
+            <div class="helper-text">导入时会逐行识别；有明确日期就按文字里的日期，没有日期就按当前选择日期。</div>
+          </div>
         </section>
 
         <section class="panel" id="taskPanel">
@@ -2421,6 +2505,27 @@
       }).format(date);
     }
 
+    function datesBetween(startISO, endISO) {
+      const dates = [];
+      let current = startISO <= endISO ? startISO : endISO;
+      const end = startISO <= endISO ? endISO : startISO;
+      while (current <= end) {
+        dates.push(current);
+        current = addDays(current, 1);
+      }
+      return dates;
+    }
+
+    function fullDateText(dateISO) {
+      const date = new Date(`${dateISO}T00:00:00`);
+      return new Intl.DateTimeFormat("zh-CN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        weekday: "long"
+      }).format(date);
+    }
+
     function uid() {
       if (window.crypto && typeof window.crypto.randomUUID === "function") {
         return window.crypto.randomUUID();
@@ -2702,6 +2807,29 @@
           authUser.appendChild(option);
         });
       }
+      renderExportMembers();
+    }
+
+    function renderExportMembers() {
+      const select = document.getElementById("exportMembers");
+      if (!select) return;
+      const previous = selectedValues(select);
+      select.innerHTML = "";
+      const allowed = isManagerUser()
+        ? members.filter(member => member.id !== "all")
+        : members.filter(member => visibleMemberIdsForCurrentUser().includes(member.id));
+      allowed.forEach(member => {
+        const option = document.createElement("option");
+        option.value = member.id;
+        option.textContent = member.name;
+        select.appendChild(option);
+      });
+      const defaultValues = previous.length
+        ? previous.filter(id => allowed.some(member => member.id === id))
+        : state.selectedMember !== "all" && allowed.some(member => member.id === state.selectedMember)
+          ? [state.selectedMember]
+          : allowed.slice(0, Math.min(3, allowed.length)).map(member => member.id);
+      setSelectedValues(select, defaultValues);
     }
 
     function selectedValues(select) {
@@ -2737,10 +2865,14 @@
       const schedulePerson = document.getElementById("schedulePerson");
       const scheduleDate = document.getElementById("scheduleDate");
       const routineAssignee = document.getElementById("routineAssignee");
+      const exportStartDate = document.getElementById("exportStartDate");
+      const exportEndDate = document.getElementById("exportEndDate");
       const title = document.getElementById("quickPanelTitle");
       if (scheduleDate && !scheduleDate.value) {
         scheduleDate.value = state.selectedDate;
       }
+      if (exportStartDate && !exportStartDate.value) exportStartDate.value = state.selectedDate;
+      if (exportEndDate && !exportEndDate.value) exportEndDate.value = state.selectedDate;
       if (state.selectedMember !== "all") {
         setSelectedValues(schedulePerson, [state.selectedMember]);
         if (routineAssignee) routineAssignee.value = state.selectedMember;
@@ -2810,6 +2942,7 @@
       document.getElementById("workerTodayPanel").hidden = !simple;
       document.getElementById("quickPanel").style.display = simple || !canAddContent() ? "none" : "";
       document.getElementById("routinePanel").style.display = simple || !canAddContent() ? "none" : "";
+      document.getElementById("textExchangePanel").style.display = simple || !canAddContent() ? "none" : "";
       document.querySelector(".right").style.display = simple ? "none" : "";
     }
 
@@ -3357,6 +3490,132 @@
         return "确认具体物品、数量、地点和完成时间，不清楚先问妈妈或陈管家。";
       }
       return suggestPrep(text, location);
+    }
+
+    function exportScheduleText() {
+      const memberIds = selectedValues(document.getElementById("exportMembers")).filter(Boolean);
+      const start = document.getElementById("exportStartDate").value || state.selectedDate;
+      const end = document.getElementById("exportEndDate").value || start;
+      const output = document.getElementById("exportText");
+      if (!memberIds.length) {
+        output.value = "请先选择要导出的成员。";
+        return;
+      }
+      const allowed = new Set(visibleMemberIdsForCurrentUser());
+      const selected = memberIds.filter(id => isManagerUser() || allowed.has(id));
+      const dateList = datesBetween(start, end);
+      const tasks = state.tasks
+        .filter(task => selected.includes(task.assignee))
+        .filter(task => dateList.includes(task.date || todayISO()))
+        .sort((a, b) => `${a.date || todayISO()} ${a.time || "09:00"} ${personSortIndex(a.assignee)}`.localeCompare(`${b.date || todayISO()} ${b.time || "09:00"} ${personSortIndex(b.assignee)}`));
+
+      const lines = [
+        `家庭行程：${selected.map(id => memberById(id).name).join("、")}`,
+        `时间：${fullDateText(dateList[0])}${dateList.length > 1 ? ` 至 ${fullDateText(dateList[dateList.length - 1])}` : ""}`,
+        ""
+      ];
+
+      dateList.forEach(date => {
+        const dayTasks = tasks.filter(task => (task.date || todayISO()) === date);
+        if (!dayTasks.length) return;
+        lines.push(`${fullDateText(date)}`);
+        selected.forEach(memberId => {
+          const personTasks = dayTasks.filter(task => task.assignee === memberId).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+          if (!personTasks.length) return;
+          lines.push(`${memberById(memberId).name}`);
+          personTasks.forEach(task => {
+            const location = task.location && task.location !== "none" ? `｜地点：${locationById(task.location)}` : "";
+            const follow = shouldShowFollowUp(task) && task.followUp && task.followUp !== "none" ? `｜跟进：${followUpText(task.followUp)}` : "";
+            const relation = task.groupId ? relationSummaryBadgesPlain(task) : "";
+            lines.push(`[${date} ${task.time || "09:00"}] ${memberById(task.assignee).name}：${task.title}${location}${follow}${relation ? `｜${relation}` : ""}`);
+          });
+          lines.push("");
+        });
+      });
+
+      output.value = tasks.length
+        ? lines.join("\n").trim()
+        : `所选成员在 ${fullDateText(dateList[0])}${dateList.length > 1 ? ` 至 ${fullDateText(dateList[dateList.length - 1])}` : ""} 暂无事项。`;
+    }
+
+    function relationSummaryBadgesPlain(task) {
+      if (!task.groupId) return "";
+      const groupTasks = state.tasks.filter(item => item.groupId === task.groupId);
+      const people = groupTasks.filter(item => /本人/.test(item.relationLabel || "")).map(item => memberById(item.assignee).name);
+      const rides = groupTasks.filter(item => /接送/.test(item.relationLabel || "")).map(item => memberById(item.assignee).name);
+      const executors = groupTasks.filter(item => /执行|陪同|跟进/.test(item.relationLabel || "")).map(item => memberById(item.assignee).name);
+      const unique = list => [...new Set(list)].join("、");
+      return [
+        people.length ? `人员：${unique(people)}` : "",
+        rides.length ? `接送：${unique(rides)}` : "",
+        executors.length ? `陪同/执行：${unique(executors)}` : ""
+      ].filter(Boolean).join("｜");
+    }
+
+    function extractImportDate(line) {
+      const iso = line.match(/\b(20\d{2}-\d{1,2}-\d{1,2})\b/);
+      if (iso) {
+        const [year, month, day] = iso[1].split("-").map(Number);
+        return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      }
+      const zh = line.match(/(20\d{2})年(\d{1,2})月(\d{1,2})日/);
+      if (zh) return `${zh[1]}-${String(Number(zh[2])).padStart(2, "0")}-${String(Number(zh[3])).padStart(2, "0")}`;
+      if (/大后天/.test(line)) return addDays(todayISO(), 3);
+      if (/后天/.test(line)) return addDays(todayISO(), 2);
+      if (/明天|明日/.test(line)) return addDays(todayISO(), 1);
+      if (/今天|今日/.test(line)) return todayISO();
+      return "";
+    }
+
+    function importStructuredLine(line, fallbackDate) {
+      const match = line.match(/^\[?\s*(20\d{2}-\d{1,2}-\d{1,2})\s+(\d{1,2}:\d{2})\s*\]?\s*([^：:]+)[：:]\s*(.+)$/);
+      if (!match) return false;
+      const date = extractImportDate(match[1]) || fallbackDate;
+      const assignee = detectAssignablePerson(match[3], "") || detectPersonId(match[3], "");
+      if (!assignee) return false;
+      const detail = match[4].split(/[｜|]/)[0].replace(/（.*?）/g, "").trim();
+      createTaskForAssignee({
+        title: detail || "导入事项",
+        assignee,
+        date,
+        time: match[2],
+        location: inferLocation(match[4]),
+        prep: suggestServicePrep(match[4], inferLocation(match[4]))
+      });
+      return true;
+    }
+
+    async function importScheduleText() {
+      const input = document.getElementById("importText");
+      const lines = input.value
+        .split(/\r?\n/)
+        .map(line => line.replace(/^[-*•\s]+/, "").trim())
+        .filter(line => line && !/^家庭行程|^时间：|^\d{4}年|^\d{4}月|^妈妈$|^爸爸$|^Angela$|^Alisa$|^Aron$/.test(line));
+      if (!lines.length) return;
+      const originalDate = state.selectedDate;
+      let imported = 0;
+      for (const line of lines) {
+        const explicitDate = extractImportDate(line) || state.selectedDate;
+        if (importStructuredLine(line, explicitDate)) {
+          imported += 1;
+          continue;
+        }
+        const before = state.tasks.length + state.feedbacks.length;
+        state.selectedDate = explicitDate;
+        const usedGPT = await parseNaturalRequestWithGPT(line, state.currentUser || "mom");
+        if (!usedGPT) parseNaturalRequest(line, state.currentUser || "mom");
+        const after = state.tasks.length + state.feedbacks.length;
+        if (after > before) imported += 1;
+      }
+      state.selectedDate = originalDate;
+      state.notices.unshift({
+        id: uid(),
+        text: `已从文字批量导入 ${imported} 行内容。`,
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      });
+      input.value = "";
+      save();
+      render();
     }
 
     function inferMealName(text, time) {
@@ -4616,6 +4875,33 @@
       document.getElementById("scheduleTitle").value = "";
       save();
       render();
+    });
+
+    document.getElementById("generateExportTextBtn").addEventListener("click", exportScheduleText);
+
+    document.getElementById("copyExportTextBtn").addEventListener("click", async () => {
+      const textarea = document.getElementById("exportText");
+      if (!textarea.value.trim()) exportScheduleText();
+      textarea.focus();
+      textarea.select();
+      try {
+        await navigator.clipboard.writeText(textarea.value);
+      } catch (error) {
+        document.execCommand("copy");
+      }
+      state.notices.unshift({
+        id: uid(),
+        text: "行程文字已复制，可以粘贴到邮件或微信里。",
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      });
+      save();
+      render();
+    });
+
+    document.getElementById("importTextBtn").addEventListener("click", importScheduleText);
+
+    document.getElementById("clearImportTextBtn").addEventListener("click", () => {
+      document.getElementById("importText").value = "";
     });
 
     document.getElementById("feedbackForm").addEventListener("submit", event => {
