@@ -86,6 +86,7 @@
     }
 
     .date-pill {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -108,6 +109,11 @@
       color: var(--ink);
       font-weight: 900;
       box-shadow: var(--glow);
+    }
+
+    .date-today-btn {
+      min-height: 34px;
+      padding: 0 10px;
     }
 
     .date-input {
@@ -1229,7 +1235,7 @@
       .date-pill {
         width: 100%;
         display: grid;
-        grid-template-columns: 28px minmax(0, 1fr) 28px;
+        grid-template-columns: 28px minmax(0, 1fr) 28px 44px;
         justify-content: stretch;
         min-height: 32px;
         padding: 6px;
@@ -1244,15 +1250,25 @@
 
       .date-head .date-pill {
         margin: 0;
-        max-width: 250px;
+        max-width: 100%;
       }
 
-      #prevDateBtn {
+      .task-date-row {
+        padding: 10px 12px 0;
+        border-bottom: 0;
+      }
+
+      .task-date-row .date-pill {
+        max-width: 100%;
+        margin: 0;
+      }
+
+      .date-pill [data-date-action="prev"] {
         grid-column: 1;
         grid-row: 1;
       }
 
-      #todayText {
+      .date-pill [data-date-text] {
         grid-column: 2;
         grid-row: 1;
         min-width: 0;
@@ -1260,17 +1276,35 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         text-align: center;
+        cursor: pointer;
       }
 
-      #nextDateBtn {
+      .date-pill [data-date-action="next"] {
         grid-column: 3;
         grid-row: 1;
       }
 
-      #currentDateInput {
-        grid-column: 1 / -1;
-        grid-row: 2;
-        display: none;
+      .date-pill [data-date-action="today"] {
+        grid-column: 4;
+        grid-row: 1;
+        width: 100%;
+        min-height: 28px;
+        padding: 0;
+        font-size: 12px;
+      }
+
+      .date-pill [data-date-input] {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 1px;
+        min-width: 1px;
+        height: 1px;
+        min-height: 1px;
+        padding: 0;
+        border: 0;
+        opacity: 0;
+        pointer-events: none;
       }
 
       #langZhBtn {
@@ -1334,10 +1368,6 @@
       body.mobile-tab-member #overviewPanel,
       body.mobile-tab-member #quickPanel,
       body.mobile-tab-member #routinePanel {
-        display: none !important;
-      }
-
-      body.mobile-tab-member .layout.simple-worker-mode #taskPanel {
         display: none !important;
       }
 
@@ -1784,6 +1814,15 @@
               <button class="view-option" type="button" data-view="visual">可视图</button>
             </div>
           </div>
+          <div class="task-date-row">
+            <div class="date-pill compact-date" aria-label="选择任务日期">
+              <button class="date-button" type="button" data-date-action="prev">‹</button>
+              <strong data-date-text></strong>
+              <input class="date-input" type="date" data-date-input />
+              <button class="date-button" type="button" data-date-action="next">›</button>
+              <button class="chip date-today-btn" type="button" data-date-action="today">今天</button>
+            </div>
+          </div>
           <div class="task-toolbar" id="filters">
             <button class="chip active" type="button" data-range="day">当天</button>
             <button class="chip" type="button" data-range="week">本周</button>
@@ -1798,10 +1837,11 @@
       <aside class="panel right" id="overviewPanel">
         <div class="panel-head date-head">
           <div class="date-pill" aria-label="今天日期">
-            <button class="date-button" type="button" id="prevDateBtn">‹</button>
-            <strong id="todayText"></strong>
-            <input class="date-input" id="currentDateInput" type="date" />
-            <button class="date-button" type="button" id="nextDateBtn">›</button>
+            <button class="date-button" type="button" id="prevDateBtn" data-date-action="prev">‹</button>
+            <strong id="todayText" data-date-text></strong>
+            <input class="date-input" id="currentDateInput" type="date" data-date-input />
+            <button class="date-button" type="button" id="nextDateBtn" data-date-action="next">›</button>
+            <button class="chip date-today-btn" type="button" id="goTodayBtn" data-date-action="today">今天</button>
             <button class="chip active" type="button" id="langZhBtn" data-lang="zh">中文</button>
             <button class="chip" type="button" id="langEnBtn" data-lang="en">EN</button>
           </div>
@@ -1814,12 +1854,12 @@
               <span class="dashboard-note" id="latestFeedbackText">暂无新的私密反馈</span>
             </div>
             <div class="dashboard-card alert">
-              <span class="dashboard-label">今天全部事项</span>
+              <span class="dashboard-label" id="dayTotalLabel">当天全部事项</span>
               <b class="dashboard-number" id="todayIssueCount">0</b>
               <span class="dashboard-note" id="todayIssueText">查看今天时段安排</span>
             </div>
             <div class="dashboard-card">
-              <span class="dashboard-label">今天未完成</span>
+              <span class="dashboard-label" id="dayOpenLabel">当天未完成</span>
               <b class="dashboard-number" id="todayOpenCount">0</b>
               <span class="dashboard-note" id="todayBusyText">今天暂时没有待办</span>
             </div>
@@ -2401,6 +2441,19 @@
         day: "numeric",
         weekday: "long"
       }).format(date);
+    }
+
+    function selectedDateLabel() {
+      const today = todayISO();
+      if (state.selectedDate === today) return appLanguage === "en" ? "Today" : "今天";
+      if (state.selectedDate === addDays(today, 1)) return appLanguage === "en" ? "Tomorrow" : "明天";
+      if (state.selectedDate === addDays(today, 2)) return appLanguage === "en" ? "The day after tomorrow" : "后天";
+      if (state.selectedDate === addDays(today, -1)) return appLanguage === "en" ? "Yesterday" : "昨天";
+      return appLanguage === "en" ? "Selected day" : "所选日期";
+    }
+
+    function selectedDateDisplayText() {
+      return `${selectedDateLabel()} · ${selectedDateText()}`;
     }
 
     function visibleTasks() {
@@ -3692,7 +3745,8 @@
       panel.hidden = false;
       const member = memberById(state.selectedMember);
       const content = document.getElementById("workerTodayContent");
-      document.getElementById("workerTodayTitle").textContent = `${member.name}的今天`;
+      const dayLabel = selectedDateLabel();
+      document.getElementById("workerTodayTitle").textContent = `${member.name}的${dayLabel}`;
       const tasks = state.tasks
         .filter(task => task.assignee === state.selectedMember && (task.date || todayISO()) === state.selectedDate)
         .filter(task => task.status !== "done")
@@ -3702,7 +3756,7 @@
       const next = tasks.find(task => current && task.id !== current.id && timeToMinutes(task.time || "09:00") >= timeToMinutes(current.time || "09:00"));
 
       if (!current) {
-        content.innerHTML = `<div class="empty">今天暂时没有需要处理的事项。</div>`;
+        content.innerHTML = `<div class="empty">${dayLabel}暂时没有需要处理的事项。可以点下面的“本周”查看未来安排。</div>`;
         return;
       }
 
@@ -3722,7 +3776,7 @@
         </div>
         <div class="worker-next">
           <span class="worker-mini-label">下一个</span>
-          <strong>${next ? `${next.time} · ${next.title}` : "今天后面暂无事项"}</strong>
+          <strong>${next ? `${next.time} · ${next.title}` : `${dayLabel}后面暂无事项`}</strong>
           ${next ? `<span class="dashboard-note">${locationById(next.location)} · ${next.prep || suggestPrep(next.title, next.location)}</span>` : ""}
         </div>
       `;
@@ -3989,8 +4043,8 @@
       sheet.hidden = false;
     }
 
-    function todayTasks() {
-      return state.tasks.filter(task => (task.date || todayISO()) === todayISO());
+    function selectedDayTasks() {
+      return state.tasks.filter(task => (task.date || todayISO()) === state.selectedDate);
     }
 
     function feedbackCreatedAt(feedback) {
@@ -4009,13 +4063,14 @@
       dot.hidden = !canSee;
       if (!canSee) return;
 
-      const tasks = todayTasks();
+      const tasks = selectedDayTasks();
       const openTasks = tasks.filter(task => task.status !== "done");
       const todayFeedbacks = unreadFeedbacks();
       const now = new Date();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const upcoming = openTasks
         .filter(task => {
+          if (!isSelectedDateToday()) return true;
           const start = timeToMinutes(task.time || "09:00");
           return start >= nowMinutes && start <= nowMinutes + 90;
         })
@@ -4024,6 +4079,8 @@
       const unread = unreadFeedbacks();
       const latestFeedback = state.feedbacks[0];
 
+      document.getElementById("dayTotalLabel").textContent = `${selectedDateLabel()}全部事项`;
+      document.getElementById("dayOpenLabel").textContent = `${selectedDateLabel()}未完成`;
       document.getElementById("unreadFeedbackCount").textContent = unread.length;
       document.getElementById("todayIssueCount").textContent = tasks.length;
       document.getElementById("todayOpenCount").textContent = openTasks.length;
@@ -4036,13 +4093,13 @@
         : "暂无新的私密反馈";
       document.getElementById("todayIssueText").textContent = tasks.length
         ? `上午 ${tasks.filter(task => timeToMinutes(task.time || "09:00") < 12 * 60).length} / 下午 ${tasks.filter(task => timeToMinutes(task.time || "09:00") >= 12 * 60 && timeToMinutes(task.time || "09:00") < 18 * 60).length} / 晚上 ${tasks.filter(task => timeToMinutes(task.time || "09:00") >= 18 * 60).length}`
-        : "今天暂无事项";
+        : `${selectedDateLabel()}暂无事项`;
       document.getElementById("todayBusyText").textContent = openTasks.length
-        ? `${new Set(openTasks.map(task => task.assignee)).size} 个人今天还有事项`
-        : "今天暂时没有待办";
+        ? `${new Set(openTasks.map(task => task.assignee)).size} 个人${selectedDateLabel()}还有事项`
+        : `${selectedDateLabel()}暂时没有待办`;
       document.getElementById("upcomingText").textContent = upcoming.length
         ? `${upcoming[0].time} ${memberById(upcoming[0].assignee).name}：${upcoming[0].title}`
-        : "暂无即将开始事项";
+        : `${selectedDateLabel()}暂无即将开始事项`;
 
       const focus = document.getElementById("momFocusList");
       focus.innerHTML = "";
@@ -4067,13 +4124,13 @@
           value: memberById(feedback.from).name
         })),
         ...busyPeople.map(item => ({
-          title: `${item.member.name} 今天有 ${item.total} 项`,
+          title: `${item.member.name} ${selectedDateLabel()}有 ${item.total} 项`,
           value: `${item.open} 未完成`
         }))
       ].slice(0, 6);
 
       if (!focusRows.length) {
-        focus.innerHTML = `<div class="empty">今天目前很清爽，没有需要妈妈马上处理的提醒。</div>`;
+        focus.innerHTML = `<div class="empty">${selectedDateLabel()}目前很清爽，没有需要妈妈马上处理的提醒。</div>`;
         return;
       }
 
@@ -4088,7 +4145,7 @@
         openFeedbackSummary(unread.length ? unread : state.feedbacks);
       };
       document.querySelector(".dashboard-card.alert").onclick = () => {
-        openTaskSummary("今天全部事项", tasks, { groupByPerson: true });
+        openTaskSummary(`${selectedDateLabel()}全部事项`, tasks, { groupByPerson: true });
       };
     }
 
@@ -4215,8 +4272,12 @@
 
     function render() {
       try {
-        document.getElementById("todayText").textContent = selectedDateText();
-        document.getElementById("currentDateInput").value = state.selectedDate;
+        document.querySelectorAll("[data-date-text]").forEach(element => {
+          element.textContent = selectedDateDisplayText();
+        });
+        document.querySelectorAll("[data-date-input]").forEach(input => {
+          input.value = state.selectedDate;
+        });
         renderIdentity();
         renderMembers();
         renderFilters();
@@ -4242,7 +4303,9 @@
       }
     }
 
-    document.getElementById("currentDateInput").value = state.selectedDate;
+    document.querySelectorAll("[data-date-input]").forEach(input => {
+      input.value = state.selectedDate;
+    });
     renderAssignees();
     renderLocations();
     render();
@@ -4270,25 +4333,37 @@
       render();
     });
 
-    document.getElementById("currentDateInput").addEventListener("change", event => {
-      state.selectedDate = event.target.value || todayISO();
+    function setSelectedDate(dateISO) {
+      state.selectedDate = dateISO || todayISO();
       document.getElementById("scheduleDate").value = state.selectedDate;
       render();
       checkPrepReminders();
+    }
+
+    document.querySelectorAll("[data-date-input]").forEach(input => {
+      input.addEventListener("change", event => setSelectedDate(event.target.value));
     });
 
-    document.getElementById("prevDateBtn").addEventListener("click", () => {
-      state.selectedDate = addDays(state.selectedDate, -1);
-      document.getElementById("scheduleDate").value = state.selectedDate;
-      render();
-      checkPrepReminders();
+    document.querySelectorAll("[data-date-text]").forEach(label => {
+      label.addEventListener("click", () => {
+        const input = label.closest(".date-pill").querySelector("[data-date-input]");
+        if (!input) return;
+        if (typeof input.showPicker === "function") {
+          input.showPicker();
+          return;
+        }
+        input.focus();
+        input.click();
+      });
     });
 
-    document.getElementById("nextDateBtn").addEventListener("click", () => {
-      state.selectedDate = addDays(state.selectedDate, 1);
-      document.getElementById("scheduleDate").value = state.selectedDate;
-      render();
-      checkPrepReminders();
+    document.querySelectorAll("[data-date-action]").forEach(button => {
+      button.addEventListener("click", () => {
+        const action = button.dataset.dateAction;
+        if (action === "prev") setSelectedDate(addDays(state.selectedDate, -1));
+        if (action === "next") setSelectedDate(addDays(state.selectedDate, 1));
+        if (action === "today") setSelectedDate(todayISO());
+      });
     });
 
     document.querySelectorAll("[data-lang]").forEach(button => {
