@@ -500,7 +500,7 @@
       padding: 16px;
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
+      gap: 14px 12px;
       align-items: end;
     }
 
@@ -589,6 +589,62 @@
     .field {
       display: grid;
       gap: 7px;
+    }
+
+    #linkedScheduleForm {
+      align-items: start;
+    }
+
+    #linkedScheduleForm .field {
+      gap: 6px;
+    }
+
+    #linkedScheduleForm label:not(.inline-option) {
+      padding-left: 2px;
+      letter-spacing: 0;
+    }
+
+    #linkedScheduleForm input,
+    #linkedScheduleForm select {
+      min-height: 50px;
+      border-radius: 12px;
+      border-color: rgba(18, 24, 31, 0.08);
+      background: rgba(247, 248, 250, 0.78);
+      font-size: 15px;
+      font-weight: 650;
+    }
+
+    #linkedScheduleForm input::placeholder {
+      color: rgba(84, 89, 97, 0.48);
+      font-weight: 520;
+    }
+
+    #linkedScheduleForm select[multiple] {
+      min-height: 58px;
+      max-height: 58px;
+      padding: 9px 42px 9px 12px;
+      overflow: hidden;
+    }
+
+    #linkedScheduleForm select[multiple] option {
+      padding: 6px 8px;
+    }
+
+    #linkedScheduleForm .primary {
+      min-height: 54px;
+      border-radius: 13px;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+
+    #linkedScheduleForm .inline-option {
+      width: max-content;
+      margin-top: 4px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(247, 248, 250, 0.92);
+      color: var(--ink);
+      font-size: 12px;
     }
 
     label {
@@ -1680,10 +1736,10 @@
 
     .schedule-preview {
       display: grid;
-      gap: 10px;
-      padding: 13px;
-      border-radius: 8px;
-      background: rgba(247, 248, 250, 0.66);
+      gap: 9px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(247, 248, 250, 0.62);
       border: 1px solid rgba(18, 24, 31, 0.08);
       box-shadow: var(--glow);
     }
@@ -1723,9 +1779,12 @@
     }
 
     .schedule-preview .empty {
-      min-height: 68px;
-      padding: 12px;
+      min-height: 54px;
+      padding: 12px 14px;
       font-size: 13px;
+      border-style: solid;
+      border-color: rgba(18, 24, 31, 0.06);
+      background: rgba(255, 255, 255, 0.7);
     }
 
     .empty {
@@ -2181,17 +2240,36 @@
 
       .schedule-form {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        padding: 13px;
+        padding: 12px;
+        gap: 13px 10px;
       }
 
       .schedule-form .field:nth-child(1),
       .schedule-form .field:nth-child(2),
       .schedule-form .field:nth-child(3),
       .schedule-form .field:nth-child(4),
+      .schedule-form .field:nth-child(8),
       .schedule-form .field:nth-child(9),
       #schedulePreview,
       .schedule-form .primary {
         grid-column: 1 / -1;
+      }
+
+      #linkedScheduleForm input,
+      #linkedScheduleForm select {
+        min-height: 48px;
+        border-radius: 12px;
+        font-size: 15px;
+      }
+
+      #linkedScheduleForm select[multiple] {
+        min-height: 52px;
+        max-height: 52px;
+      }
+
+      #linkedScheduleForm .field:nth-child(6),
+      #linkedScheduleForm .field:nth-child(7) {
+        min-width: 0;
       }
 
       .schedule-preview-list {
@@ -2200,7 +2278,7 @@
 
       .time-pair {
         grid-column: 1 / -1;
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 10px;
       }
 
