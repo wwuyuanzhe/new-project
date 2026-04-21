@@ -42,6 +42,16 @@
       overflow-x: hidden;
     }
 
+    body.auth-locked .topbar,
+    body.auth-locked .layout,
+    body.auth-locked .mobile-nav {
+      display: none !important;
+    }
+
+    body.auth-locked {
+      background: linear-gradient(180deg, #fbfbfd 0%, #eef2f7 100%);
+    }
+
     button,
     input,
     select,
@@ -3212,7 +3222,7 @@
         <div class="sheet-grabber" aria-hidden="true"></div>
         <div class="auth-title">
           <h2>确认身份</h2>
-          <p>选择你的名字，输入家庭验证码后进入对应页面。</p>
+          <p>选择你的名字，输入家庭验证码后进入对应页面。同一台设备会记住身份。</p>
         </div>
         <div class="panel-head">
           <h2>确认身份</h2>
@@ -3256,7 +3266,7 @@
 
     const familyPins = {
       mom: "1001",
-      driver: "1002",
+      driver: "8001",
       dad: "1003",
       daughter1: "2001",
       daughter2: "2002",
@@ -6233,7 +6243,13 @@
       const task = state.tasks.find(item => item.id === id);
       if (!task) return;
       if (["todo", "doing", "done"].includes(action)) {
-        task.status = action;
+        if (action === "doing" && task.status === "doing") {
+          task.status = "todo";
+        } else if (action === "done" && task.status === "done") {
+          task.status = "todo";
+        } else {
+          task.status = action;
+        }
       }
       if (action === "feedback") {
         const text = window.prompt(`请输入关于「${task.title}」的反馈内容`);
@@ -6765,6 +6781,7 @@
 
     function renderIdentity() {
       const user = state.currentUser ? currentUser() : null;
+      document.body.classList.toggle("auth-locked", !state.currentUser);
       document.getElementById("switchUserBtn").textContent = user
         ? `身份：${user.name}${isManagerUser() ? " 管理" : ""}`
         : "身份：未确认";
