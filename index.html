@@ -2267,6 +2267,7 @@
               </div>
               <div class="text-actions">
                 <button class="primary" type="button" id="generateExportTextBtn">生成行程文字</button>
+                <button class="action" type="button" id="generateKidsTodayTextBtn">三个孩子今日</button>
                 <button class="action" type="button" id="copyExportTextBtn">复制文字</button>
               </div>
               <textarea id="exportText" readonly placeholder="选择成员和日期后，点“生成行程文字”。"></textarea>
@@ -2844,6 +2845,12 @@
         targetIds: [...new Set((targetIds || []).filter(Boolean))],
         time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
       });
+    }
+
+    function memberNamesText(ids) {
+      return [...new Set((ids || []).filter(Boolean))]
+        .map(id => memberById(id).name)
+        .join("、");
     }
 
     function notifyAssignee(assigneeId, title) {
@@ -3860,6 +3867,17 @@
         : `所选成员在 ${fullDateText(dateList[0])}${dateList.length > 1 ? ` 至 ${fullDateText(dateList[dateList.length - 1])}` : ""} 暂无事项。`;
     }
 
+    function generateKidsTodayText() {
+      const kids = ["daughter1", "daughter2", "son"];
+      setSelectedValues(document.getElementById("exportMembers"), kids);
+      document.getElementById("exportStartDate").value = state.selectedDate;
+      document.getElementById("exportEndDate").value = state.selectedDate;
+      exportScheduleText();
+      pushNotice(`已生成 ${dateShortText(state.selectedDate)} 三个孩子的行程文字。`, kids);
+      save();
+      render();
+    }
+
     function relationMatchesTask(task, item) {
       if (task.groupId && item.groupId === task.groupId) return true;
       return (item.date || todayISO()) === (task.date || todayISO())
@@ -4839,7 +4857,7 @@
         notify: false
       });
       const newTargets = [...new Set([...oldTargets, ...people, ...executors, document.getElementById("reassignDriver").value])];
-      pushNotice(`事项已更新：${dateShortText(date)} ${time}「${title}」，请相关人员查看新的安排。`, newTargets);
+      pushNotice(`事项已更新：${dateShortText(date)} ${time}「${title}」。请 ${memberNamesText(newTargets)} 查看新的安排。`, newTargets);
       closeReassignSheet();
       save();
       render();
@@ -4916,7 +4934,7 @@
     }
 
     function priorityRowsFor(tasks) {
-      return mergedExportRows(tasks.filter(task => task.urgent && task.status !== "done"));
+      return mergedExportRows(tasks.filter(task => task.urgent));
     }
 
     function renderPriorityFocus() {
@@ -4946,7 +4964,7 @@
       const people = row.participants.size ? ` · ${[...row.participants].join("、")}` : "";
       item.innerHTML = `<strong>${row.timeText}  ${row.title}</strong><span class="badge urgent">重点${people}</span>`;
       item.addEventListener("click", () => {
-        const tasks = state.tasks.filter(task => task.urgent && task.status !== "done" && eventTitleForTask(task) === row.title && eventTimeTextForTask(task) === row.timeText);
+        const tasks = state.tasks.filter(task => task.urgent && eventTitleForTask(task) === row.title && eventTimeTextForTask(task) === row.timeText);
         openTaskSummary("重点事项", tasks, { groupByPerson: true });
       });
       return item;
@@ -5512,6 +5530,8 @@
     });
 
     document.getElementById("generateExportTextBtn").addEventListener("click", exportScheduleText);
+
+    document.getElementById("generateKidsTodayTextBtn").addEventListener("click", generateKidsTodayText);
 
     document.getElementById("copyExportTextBtn").addEventListener("click", async () => {
       const textarea = document.getElementById("exportText");
