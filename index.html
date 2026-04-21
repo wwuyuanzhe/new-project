@@ -3731,44 +3731,17 @@
       dateList.forEach(date => {
         const dayTasks = tasks.filter(task => (task.date || todayISO()) === date);
         if (!dayTasks.length) return;
+        const rows = mergedExportRows(dayTasks);
+        if (!rows.length) return;
         lines.push(`${fullDateText(date)}`);
-        selected.forEach(memberId => {
-          const personTasks = dayTasks.filter(task => task.assignee === memberId).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
-          if (!personTasks.length) return;
-          lines.push(`${memberById(memberId).name}`);
-          const mergedRows = new Map();
-          personTasks.forEach(task => {
-            const title = displayTaskTitle(task);
-            const timeText = taskTimeText(task);
-            const locationText = task.location && task.location !== "none" ? locationById(task.location) : "";
-            const key = `${date}|${timeText}|${title}|${locationText}`;
-            if (!mergedRows.has(key)) {
-              mergedRows.set(key, {
-                date,
-                timeText,
-                title,
-                locationText,
-                rides: new Set(),
-                executors: new Set()
-              });
-            }
-            const row = mergedRows.get(key);
-            collectRelationNames(task).rides.forEach(name => row.rides.add(name));
-            collectRelationNames(task).executors.forEach(name => row.executors.add(name));
-            if (!task.groupId && shouldShowFollowUp(task) && task.followUp && task.followUp !== "none") {
-              row.executors.add(followUpText(task.followUp));
-            }
-          });
-          [...mergedRows.values()]
-            .sort((a, b) => a.timeText.localeCompare(b.timeText) || a.title.localeCompare(b.title))
-            .forEach(row => {
-              const location = row.locationText ? `｜地点：${row.locationText}` : "";
-              const ride = row.rides.size ? `｜接送：${[...row.rides].join("、")}` : "";
-              const execute = row.executors.size ? `｜陪同/执行：${[...row.executors].join("、")}` : "";
-              lines.push(`[${row.date} ${row.timeText}] ${row.title}${location}${ride}${execute}`);
-            });
-          lines.push("");
+        rows.forEach(row => {
+          const people = row.participants.size ? `${[...row.participants].join("、")} ` : "";
+          const location = row.location ? `｜地点：${row.location}` : "";
+          const ride = row.rides.size ? `｜接送：${[...row.rides].join("、")}` : "";
+          const execute = row.executors.size ? `｜陪同/执行：${[...row.executors].join("、")}` : "";
+          lines.push(`[${row.date} ${row.timeText}] ${people}${row.title}${location}${ride}${execute}`);
         });
+        lines.push("");
       });
 
       output.value = tasks.length
@@ -3783,25 +3756,85 @@
         && displayTaskTitle(item) === displayTaskTitle(task);
     }
 
+    function relatedTasksFor(task) {
+      return state.tasks.filter(item => relationMatchesTask(task, item));
+    }
+
+    function primaryEventTask(task) {
+      return relatedTasksFor(task).find(item => /本人/.test(item.relationLabel || "")) || task;
+    }
+
+    function eventTitleForTask(task) {
+      return displayTaskTitle(primaryEventTask(task));
+    }
+
+    function eventTimeTextForTask(task) {
+      return taskTimeText(primaryEventTask(task));
+    }
+
+    function eventLocationTextForTask(task) {
+      const primary = primaryEventTask(task);
+      const location = primary.location && primary.location !== "none" ? primary.location : task.location;
+      return location && location !== "none" ? locationById(location) : "";
+    }
+
     function collectRelationNames(task) {
-      const related = state.tasks.filter(item => relationMatchesTask(task, item));
+      const related = relatedTasksFor(task);
+      const participants = [];
       const rides = [];
       const executors = [];
       related.forEach(item => {
         const label = item.relationLabel || "";
         const text = `${label} ${item.title || ""}`;
         const name = memberById(item.assignee).name;
-        const isRide = !/执行|陪同|跟进|execute|follow/i.test(text)
+        const isParticipant = /本人/.test(label);
+        const isRide = !isParticipant && !/执行|陪同|跟进|execute|follow/i.test(text)
           && (/接送|送|接|ride/i.test(text) || ["driver", "driverLei"].includes(item.assignee));
-        const isExecutor = /执行|陪同|跟进|execute|follow/i.test(text)
-          || ["helperA", "helperB", "helperC", "kk", "chef"].includes(item.assignee);
+        const isExecutor = !isParticipant && (
+          /执行|陪同|跟进|execute|follow/i.test(text)
+          || ["helperA", "helperB", "helperC", "kk", "chef"].includes(item.assignee)
+        );
+        if (isParticipant) participants.push(name);
         if (isRide) rides.push(name);
         if (isExecutor) executors.push(name);
       });
       return {
+        participants: [...new Set(participants)],
         rides: [...new Set(rides)],
         executors: [...new Set(executors)]
       };
+    }
+
+    function mergedExportRows(tasks) {
+      const rows = new Map();
+      tasks.forEach(task => {
+        const relations = collectRelationNames(task);
+        const title = eventTitleForTask(task);
+        const timeText = eventTimeTextForTask(task);
+        const location = eventLocationTextForTask(task);
+        const participantKey = relations.participants.length ? relations.participants.join("、") : memberById(task.assignee).name;
+        const key = `${task.date || todayISO()}|${timeText}|${title}|${location}|${participantKey}`;
+        if (!rows.has(key)) {
+          rows.set(key, {
+            date: task.date || todayISO(),
+            timeText,
+            title,
+            location,
+            participants: new Set(relations.participants.length ? relations.participants : [memberById(task.assignee).name]),
+            rides: new Set(),
+            executors: new Set()
+          });
+        }
+        const row = rows.get(key);
+        relations.participants.forEach(name => row.participants.add(name));
+        relations.rides.forEach(name => row.rides.add(name));
+        relations.executors.forEach(name => row.executors.add(name));
+        if (!task.groupId && shouldShowFollowUp(task) && task.followUp && task.followUp !== "none") {
+          row.executors.add(followUpText(task.followUp));
+        }
+      });
+      return [...rows.values()]
+        .sort((a, b) => a.timeText.localeCompare(b.timeText) || a.title.localeCompare(b.title));
     }
 
     function relationSummaryBadgesPlain(task) {
@@ -4328,6 +4361,7 @@
 
     function renderTaskItems(list, tasks) {
       const renderedGroups = new Set();
+      const renderedPersonalRows = new Set();
       tasks.forEach(task => {
         if (state.selectedMember === "all" && task.groupId) {
           if (renderedGroups.has(task.groupId)) return;
@@ -4335,6 +4369,11 @@
           const groupTasks = tasks.filter(item => item.groupId === task.groupId);
           list.appendChild(createTaskGroup(groupTasks));
           return;
+        }
+        if (state.selectedMember !== "all") {
+          const personalKey = mergeKeyForSummary(task);
+          if (renderedPersonalRows.has(personalKey)) return;
+          renderedPersonalRows.add(personalKey);
         }
         list.appendChild(createTaskCard(task));
       });
@@ -4361,19 +4400,7 @@
 
     function relationSummaryBadges(task) {
       if (!task.groupId) return "";
-      const groupTasks = state.tasks.filter(item => item.groupId === task.groupId);
-      if (!groupTasks.length) return "";
-      const rides = groupTasks
-        .filter(item => {
-          const label = item.relationLabel || "";
-          const text = `${label} ${item.title || ""}`;
-          if (/执行|陪同|跟进|execute|follow/i.test(text)) return false;
-          return /接送|送|接|ride/i.test(text) || ["driver", "driverLei"].includes(item.assignee);
-        })
-        .map(item => memberById(item.assignee).name);
-      const executors = groupTasks
-        .filter(item => /执行|陪同|跟进|execute|follow/i.test(`${item.relationLabel || ""} ${item.title || ""}`) || ["helperA", "helperB", "helperC", "kk", "chef"].includes(item.assignee))
-        .map(item => memberById(item.assignee).name);
+      const { rides, executors } = collectRelationNames(task);
       const unique = list => [...new Set(list)].join("、");
       return [
         rides.length ? `<span class="badge">接送：${unique(rides)}</span>` : "",
@@ -4389,6 +4416,10 @@
       const locationBadge = task.location && task.location !== "none"
         ? `<span class="badge">${locationById(task.location)}</span>`
         : "";
+      const participants = task.groupId ? collectRelationNames(task).participants : [];
+      const participantBadge = participants.length > 1
+        ? `<span class="badge">同行：${participants.join("、")}</span>`
+        : "";
       const relationBadges = relationSummaryBadges(task);
       const followUpBadge = !task.groupId && shouldShowFollowUp(task) && task.followUp && task.followUp !== "none"
         ? `<span class="badge">陪同/执行：${followUpText(task.followUp || inferFollowUp(task))}</span>`
@@ -4398,6 +4429,7 @@
         dateBadge,
         `<span class="badge">${taskTimeText(task)}</span>`,
         assigneeBadge,
+        participantBadge,
         relationBadges,
         followUpBadge,
         locationBadge,
@@ -4710,14 +4742,14 @@
     }
 
     function summaryTitle(task) {
-      return task.groupTitle || displayTaskTitle(task);
+      return eventTitleForTask(task);
     }
 
     function mergeKeyForSummary(task) {
       if (task.groupId && isRelationTask(task)) return `group|${task.assignee}|${task.groupId}`;
       const title = summaryTitle(task);
-      const location = task.location && task.location !== "none" ? locationById(task.location) : "";
-      return `semantic|${task.assignee}|${task.date || todayISO()}|${taskTimeText(task)}|${title}|${location}`;
+      const location = eventLocationTextForTask(task);
+      return `semantic|${task.assignee}|${task.date || todayISO()}|${eventTimeTextForTask(task)}|${title}|${location}`;
     }
 
     function mergedSummaryRows(tasks) {
@@ -4728,9 +4760,10 @@
           const relations = collectRelationNames(task);
           rows.set(key, {
             task,
-            timeText: taskTimeText(task),
+            timeText: eventTimeTextForTask(task),
             title: summaryTitle(task),
-            location: task.location && task.location !== "none" ? locationById(task.location) : "",
+            location: eventLocationTextForTask(task),
+            participants: new Set(relations.participants),
             rides: new Set(relations.rides),
             executors: new Set(relations.executors),
             statuses: new Set(),
@@ -4740,6 +4773,7 @@
         }
         const row = rows.get(key);
         const relations = collectRelationNames(task);
+        relations.participants.forEach(name => row.participants.add(name));
         relations.rides.forEach(name => row.rides.add(name));
         relations.executors.forEach(name => row.executors.add(name));
         if (!task.groupId && shouldShowFollowUp(task) && task.followUp && task.followUp !== "none") {
@@ -4755,6 +4789,7 @@
 
     function summaryRelationText(row) {
       return [
+        row.participants.size > 1 ? `同行：${[...row.participants].join("、")}` : "",
         row.location ? `地点：${row.location}` : "",
         row.rides.size ? `接送：${[...row.rides].join("、")}` : "",
         row.executors.size ? `陪同/执行：${[...row.executors].join("、")}` : ""
