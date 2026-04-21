@@ -161,6 +161,46 @@
       box-shadow: var(--glow);
     }
 
+    .inbox-pill {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--ink);
+      font-size: 17px;
+      font-weight: 900;
+      box-shadow: var(--glow);
+    }
+
+    .inbox-pill[hidden] {
+      display: none;
+    }
+
+    .inbox-count {
+      position: absolute;
+      right: -6px;
+      top: -7px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #ff3b30;
+      color: #fff;
+      border: 2px solid rgba(255, 255, 255, 0.96);
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 900;
+      box-shadow: 0 6px 14px rgba(255, 59, 48, 0.26);
+    }
+
     .auth-form {
       display: grid;
       gap: 14px;
@@ -1539,32 +1579,39 @@
 
     .bar {
       grid-column: 1 / -1;
-      height: 9px;
-      background: rgba(18, 24, 31, 0.08);
-      border-radius: 8px;
+      height: 10px;
+      background: rgba(18, 24, 31, 0.06);
+      border-radius: 999px;
       overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(18, 24, 31, 0.04);
     }
 
     .fill {
       height: 100%;
-      background: linear-gradient(90deg, #00c7be, #007aff);
+      background: linear-gradient(90deg, #8fd8ff, #007aff);
       width: 0%;
+      border-radius: inherit;
+      box-shadow: 0 0 18px rgba(0, 122, 255, 0.22);
+      transition: width 0.24s ease;
     }
 
     .progress-row.good .fill {
-      background: linear-gradient(90deg, #34c759, #00c7be);
+      background: linear-gradient(90deg, #7ee2a8, #30d158);
+      box-shadow: 0 0 18px rgba(48, 209, 88, 0.22);
     }
 
     .progress-row.busy .fill {
-      background: linear-gradient(90deg, #ff9f0a, #ff453a);
+      background: linear-gradient(90deg, #ffd18a, #ff9f0a);
+      box-shadow: 0 0 18px rgba(255, 159, 10, 0.2);
     }
 
     .progress-row.idle {
-      opacity: 0.68;
+      opacity: 1;
     }
 
     .progress-row.idle .fill {
-      background: rgba(18, 24, 31, 0.18);
+      background: linear-gradient(90deg, #c7f3d6, #30d158);
+      box-shadow: 0 0 18px rgba(48, 209, 88, 0.18);
     }
 
     .empty {
@@ -1631,13 +1678,21 @@
       }
 
       .identity-pill {
-        width: 100%;
+        flex: 1;
+        min-width: 0;
         min-height: 30px;
         padding: 0 9px;
         font-size: 12px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .inbox-pill {
+        width: 34px;
+        height: 30px;
+        flex: 0 0 auto;
+        font-size: 15px;
       }
 
       .date-pill {
@@ -2184,6 +2239,7 @@
         <p>家里今天要做的事，一眼就看明白。</p>
       </div>
       <div class="identity-bar">
+        <button class="inbox-pill" type="button" id="butlerInboxBtn" aria-label="待确认信箱" hidden>✉<span class="inbox-count" id="butlerInboxCount">0</span></button>
         <button class="identity-pill" type="button" id="switchUserBtn">当前身份：未确认</button>
       </div>
     </header>
@@ -2202,13 +2258,6 @@
             <h2 id="workerTodayTitle">我的今天</h2>
           </div>
           <div class="worker-today" id="workerTodayContent"></div>
-        </section>
-
-        <section class="panel" id="butlerRequestPanel" hidden>
-          <div class="panel-head">
-            <h2>待确认原文</h2>
-          </div>
-          <div class="butler-request-list" id="butlerRequestList"></div>
         </section>
 
         <section class="panel" id="quickPanel">
@@ -3116,6 +3165,7 @@
     function visibleTasks() {
       return state.tasks
         .filter(task => dateInRange(task.date || todayISO()))
+        .filter(task => !task.requestText)
         .filter(task => visibleMemberIdsForCurrentUser().includes(task.assignee) || state.selectedMember === "all" && isManagerUser())
         .filter(task => state.selectedMember === "all" || task.assignee === state.selectedMember)
         .filter(task => {
@@ -3334,7 +3384,6 @@
       const simple = isSimpleWorker(state.selectedMember);
       document.querySelector(".layout").classList.toggle("simple-worker-mode", simple);
       document.getElementById("workerTodayPanel").hidden = !simple;
-      document.getElementById("butlerRequestPanel").hidden = state.selectedMember !== "driver";
       document.getElementById("quickPanel").style.display = simple || !canAddContent() ? "none" : "";
       document.getElementById("routinePanel").style.display = simple || !canAddContent() ? "none" : "";
       document.querySelector(".right").style.display = simple ? "none" : "";
@@ -3560,7 +3609,7 @@
         requestFrom: requesterId,
         notify: false
       });
-      pushNotice(`待陈管家确认：${requesterName} 提出了一段原始行程。${reason}，请陈管家打开“待确认原文”查看完整内容。`, ["driver"]);
+      pushNotice(`待陈管家确认：${requesterName} 提出了一段原始行程。${reason}，请陈管家打开顶部“待确认信箱”查看完整内容。`, ["driver"]);
       state.notices.unshift({
         id: uid(),
         text: `这条内容已完整转给陈管家确认，没有自动添加到其他人的日程：${clean}`,
@@ -4738,9 +4787,6 @@
         const prep = task.prep || suggestPrep(task.title, task.location);
         const canOperate = canOperateTask(task);
         const canManage = canManageTask(task);
-        const requestDetail = task.requestText
-          ? `<div class="request-line">原始请求：${escapeHtml(memberById(task.requestFrom).name || "收到新的请求")}：${escapeHtml(task.requestText)}</div>`
-          : "";
         const card = document.createElement("article");
         card.className = `task ${task.urgent ? "urgent" : ""} ${task.status} ${task.assignedAt ? "assigned" : ""}`;
         card.innerHTML = `
@@ -4753,7 +4799,6 @@
             </div>
             <span class="badge status ${task.status === "done" ? "done" : ""}">${statusText(task.status)}</span>
           </div>
-          ${requestDetail}
           <div class="prep-line">${appLanguage === "en" ? "15-min prep" : "开始前 15 分钟提醒"}：${prep}</div>
           <div class="task-actions">
             ${canOperate ? `<button class="action" type="button" data-action="doing">${appLanguage === "en" ? "Start" : "开始"}</button>` : ""}
@@ -4821,19 +4866,45 @@
       });
     }
 
-    function renderButlerRequests() {
-      const panel = document.getElementById("butlerRequestPanel");
-      const list = document.getElementById("butlerRequestList");
-      if (!panel || !list) return;
-      const show = state.selectedMember === "driver";
-      panel.hidden = !show;
-      if (!show) return;
-      const requests = state.tasks
+    function canSeeButlerInbox() {
+      return ["mom", "driver"].includes(state.currentUser);
+    }
+
+    function pendingButlerRequests() {
+      return state.tasks
         .filter(task => task.assignee === "driver" && task.requestText)
+        .filter(task => task.status !== "done")
         .sort((a, b) => `${b.date || todayISO()} ${b.time || "09:00"}`.localeCompare(`${a.date || todayISO()} ${a.time || "09:00"}`));
-      list.innerHTML = "";
+    }
+
+    function renderButlerInboxButton() {
+      const button = document.getElementById("butlerInboxBtn");
+      const count = document.getElementById("butlerInboxCount");
+      const canSee = canSeeButlerInbox();
+      const requests = pendingButlerRequests();
+      button.hidden = !canSee;
+      if (!canSee) return;
+      count.textContent = requests.length;
+      count.hidden = requests.length === 0;
+    }
+
+    function openButlerInbox() {
+      if (!canSeeButlerInbox()) return;
+      const sheet = document.getElementById("overviewSheet");
+      const content = document.getElementById("overviewSheetContent");
+      const actions = document.getElementById("overviewSheetActions");
+      const closeButton = document.getElementById("closeOverviewSheet");
+      const requests = pendingButlerRequests();
+      sheet.classList.remove("feedback-sheet");
+      document.getElementById("overviewSheetTitle").textContent = "待确认信箱";
+      closeButton.hidden = false;
+      closeButton.style.display = "";
+      actions.hidden = true;
+      actions.innerHTML = "";
+      content.innerHTML = "";
       if (!requests.length) {
-        list.innerHTML = `<div class="empty">AI 识别不准的原始内容会完整出现在这里，方便陈管家再手动添加日程。</div>`;
+        content.innerHTML = `<div class="empty">这里暂时没有待确认的原始请求。</div>`;
+        sheet.hidden = false;
         return;
       }
       requests.slice(0, 8).forEach(task => {
@@ -4847,27 +4918,32 @@
             <button class="action" type="button" data-done-request="${task.id}">已处理</button>
           </div>
         `;
-        list.appendChild(card);
+        content.appendChild(card);
       });
-      list.querySelectorAll("[data-open-schedule]").forEach(button => {
+      content.querySelectorAll("[data-open-schedule]").forEach(button => {
         button.addEventListener("click", () => {
           const task = state.tasks.find(item => item.id === button.dataset.openSchedule);
           state.actionMode = "schedule";
+          if (state.mobileTab !== "add") state.mobileTab = "add";
           if (task) {
             document.getElementById("scheduleTitle").value = task.requestText.split(/\r?\n/).map(line => line.trim()).filter(Boolean)[0] || task.requestText;
           }
+          sheet.hidden = true;
           renderActionTabs();
+          renderMobileShell();
           document.getElementById("quickPanel").scrollIntoView({ behavior: "smooth", block: "start" });
         });
       });
-      list.querySelectorAll("[data-done-request]").forEach(button => {
+      content.querySelectorAll("[data-done-request]").forEach(button => {
         button.addEventListener("click", () => {
           const task = state.tasks.find(item => item.id === button.dataset.doneRequest);
           if (task) task.status = "done";
           save();
           render();
+          openButlerInbox();
         });
       });
+      sheet.hidden = false;
     }
 
     function renderVisualTasks(container, tasks) {
@@ -5105,7 +5181,7 @@
     }
 
     function renderSummary() {
-      const dateTasks = state.tasks.filter(task => dateInRange(task.date || todayISO()));
+      const dateTasks = state.tasks.filter(task => !task.requestText && dateInRange(task.date || todayISO()));
       const progress = document.getElementById("progressList");
       if (progress) {
         progress.innerHTML = "";
@@ -5118,13 +5194,14 @@
           const done = ownTasks.filter(task => task.status === "done").length;
           const open = ownTasks.length - done;
           const percent = ownTasks.length ? Math.round((done / ownTasks.length) * 100) : 0;
+          const displayPercent = ownTasks.length ? percent : 100;
           const row = document.createElement("div");
-          const stateClass = ownTasks.length === 0 ? "idle" : open === 0 ? "good" : open >= 3 ? "busy" : "";
+          const stateClass = ownTasks.length === 0 ? "idle" : open === 0 ? "good" : percent < 45 ? "busy" : "";
           row.className = `progress-row clickable ${stateClass}`;
           row.innerHTML = `
             <strong>${member.name}</strong>
             <span class="progress-count">${done}/${ownTasks.length}</span>
-            <span class="bar"><span class="fill" style="width:${percent}%"></span></span>
+            <span class="bar"><span class="fill" style="width:${displayPercent}%"></span></span>
             <span class="progress-note">${ownTasks.length ? `${open} 未完成 · ${percent}%` : "今天暂无事项"}</span>
           `;
           row.addEventListener("click", () => {
@@ -5334,7 +5411,7 @@
     }
 
     function selectedDayTasks() {
-      return state.tasks.filter(task => (task.date || todayISO()) === state.selectedDate);
+      return state.tasks.filter(task => !task.requestText && (task.date || todayISO()) === state.selectedDate);
     }
 
     function feedbackCreatedAt(feedback) {
@@ -5590,7 +5667,7 @@
         renderRoutines();
         applySimpleWorkerLayout();
         renderWorkerToday();
-        renderButlerRequests();
+        renderButlerInboxButton();
         renderTasks();
         renderSummary();
         renderMomDashboard();
@@ -5622,6 +5699,8 @@
       document.getElementById("authPin").value = "";
       render();
     });
+
+    document.getElementById("butlerInboxBtn").addEventListener("click", openButlerInbox);
 
     document.getElementById("authForm").addEventListener("submit", event => {
       event.preventDefault();
