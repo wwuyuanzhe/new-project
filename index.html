@@ -304,23 +304,23 @@
     }
 
     .mode-tabs {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      padding: 12px 16px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px 16px 12px;
       border-bottom: 1px solid var(--line);
       background: rgba(245, 247, 250, 0.62);
     }
 
     .mode-tab {
-      min-height: 38px;
-      border-radius: 8px;
-      padding: 0 12px;
-      background: rgba(255, 255, 255, 0.72);
+      min-height: 42px;
+      border-radius: 10px;
+      padding: 0 14px;
+      background: rgba(255, 255, 255, 0.82);
       border: 1px solid rgba(18, 24, 31, 0.08);
       color: var(--ink);
-      font-weight: 800;
-      box-shadow: var(--glow);
+      font-weight: 820;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04), var(--glow);
     }
 
     .mode-tab.active {
@@ -328,50 +328,6 @@
       color: #fff;
       border-color: rgba(0, 122, 255, 0.48);
       box-shadow: 0 10px 22px rgba(0, 122, 255, 0.24), var(--glow);
-    }
-
-    .picker-source {
-      display: none;
-    }
-
-    .member-picker {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
-      gap: 8px;
-    }
-
-    .member-pick {
-      min-height: 46px;
-      border: 1px solid rgba(18, 24, 31, 0.08);
-      background: rgba(255, 255, 255, 0.78);
-      color: var(--ink);
-      border-radius: 8px;
-      padding: 6px 8px;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      font: inherit;
-      font-weight: 800;
-      box-shadow: var(--glow);
-    }
-
-    .member-pick.active {
-      border-color: rgba(0, 122, 255, 0.34);
-      background: rgba(235, 245, 255, 0.95);
-      color: var(--blue);
-    }
-
-    .member-pick .mini-avatar {
-      width: 27px;
-      height: 27px;
-      border-radius: 999px;
-      display: inline-grid;
-      place-items: center;
-      background: rgba(18, 24, 31, 0.08);
-      color: var(--ink);
-      font-size: 12px;
-      font-weight: 900;
-      flex: 0 0 auto;
     }
 
     .action-pane[hidden] {
@@ -745,6 +701,18 @@
       border: 1px solid rgba(18, 24, 31, 0.08);
       border-radius: 8px;
       padding: 9px 10px;
+    }
+
+    .request-line {
+      padding: 10px 11px;
+      border-radius: 8px;
+      background: rgba(255, 251, 235, 0.92);
+      border: 1px solid rgba(245, 158, 11, 0.18);
+      color: #7c4a03;
+      font-size: 13px;
+      line-height: 1.55;
+      font-weight: 720;
+      word-break: break-word;
     }
 
     .visual-board {
@@ -2034,7 +2002,10 @@
       }
 
       .mode-tab {
-        min-width: max-content;
+        min-width: 0;
+        min-height: 40px;
+        padding: 0 10px;
+        font-size: 13px;
       }
 
       .chip {
@@ -2204,9 +2175,6 @@
         </section>
 
         <section class="panel" id="quickPanel">
-          <div class="panel-head">
-            <h2 id="quickPanelTitle">快速处理</h2>
-          </div>
           <div class="mode-tabs" id="actionTabs">
             <button class="mode-tab active" type="button" data-action-mode="natural">Ai输入</button>
             <button class="mode-tab" type="button" data-action-mode="schedule">写日程</button>
@@ -2769,6 +2737,8 @@
           endTime: task.endTime || "",
           assignedAt: task.assignedAt || "",
           reassignedFrom: task.reassignedFrom || "",
+          requestText: task.requestText || "",
+          requestFrom: task.requestFrom || "",
           prep: task.prep || suggestPrep(match ? match[1] : task.title, task.location || "none"),
           prepReminderSent: task.prepReminderSent || false
         };
@@ -3164,57 +3134,6 @@
         });
       }
       renderExportMembers();
-      renderMemberPickers();
-    }
-
-    function pickerLabelFor(value, select) {
-      if (value === "none") return select.id.includes("Driver") ? "无" : "不指定";
-      return memberById(value).name || value;
-    }
-
-    function pickerInitialFor(value, label) {
-      if (value === "none") return "无";
-      const member = memberById(value);
-      return member.initials || label.slice(0, 1).toUpperCase();
-    }
-
-    function renderPickerForSelect(select, single = false) {
-      if (!select) return;
-      select.classList.add("picker-source");
-      let picker = select.nextElementSibling;
-      if (!picker || !picker.classList.contains("member-picker")) {
-        picker = document.createElement("div");
-        picker.className = "member-picker";
-        select.insertAdjacentElement("afterend", picker);
-      }
-      picker.innerHTML = "";
-      Array.from(select.options).forEach(option => {
-        const label = pickerLabelFor(option.value, select);
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = `member-pick ${option.selected ? "active" : ""}`;
-        button.innerHTML = `<span class="mini-avatar">${pickerInitialFor(option.value, label)}</span><span>${label}</span>`;
-        button.addEventListener("click", () => {
-          if (single || !select.multiple) {
-            select.value = option.value;
-          } else if (option.value === "none") {
-            Array.from(select.options).forEach(item => { item.selected = item.value === "none"; });
-          } else {
-            option.selected = !option.selected;
-            const none = Array.from(select.options).find(item => item.value === "none");
-            if (none) none.selected = false;
-          }
-          renderPickerForSelect(select, single);
-        });
-        picker.appendChild(button);
-      });
-    }
-
-    function renderMemberPickers() {
-      renderPickerForSelect(document.getElementById("scheduleDriver"), true);
-      renderPickerForSelect(document.getElementById("scheduleCompanion"), false);
-      renderPickerForSelect(document.getElementById("reassignDriver"), true);
-      renderPickerForSelect(document.getElementById("reassignExecutors"), false);
     }
 
     function renderExportMembers() {
@@ -3248,7 +3167,6 @@
       Array.from(select.options).forEach(option => {
         option.selected = wanted.has(option.value);
       });
-      renderMemberPickers();
     }
 
     function renderLocations() {
@@ -3275,24 +3193,17 @@
       const routineAssignee = document.getElementById("routineAssignee");
       const exportStartDate = document.getElementById("exportStartDate");
       const exportEndDate = document.getElementById("exportEndDate");
-      const title = document.getElementById("quickPanelTitle");
       if (scheduleDate && !scheduleDate.value) {
         scheduleDate.value = state.selectedDate;
       }
       if (exportStartDate && !exportStartDate.value) exportStartDate.value = state.selectedDate;
       if (exportEndDate && !exportEndDate.value) exportEndDate.value = state.selectedDate;
       if (state.selectedMember !== "all") {
-        setSelectedValues(schedulePerson, [state.selectedMember]);
         if (routineAssignee) routineAssignee.value = state.selectedMember;
-        title.textContent = `${memberById(state.selectedMember).name}的快速处理`;
       } else if (!isManagerUser() && state.currentUser) {
-        setSelectedValues(schedulePerson, [state.currentUser]);
         if (routineAssignee) routineAssignee.value = state.currentUser;
-        title.textContent = `${currentUser().name}的添加内容`;
       } else {
-        setSelectedValues(schedulePerson, ["mom"]);
         if (routineAssignee && !routineAssignee.value) routineAssignee.value = "helperA";
-        title.textContent = "添加内容";
       }
     }
 
@@ -3534,7 +3445,7 @@
       notifyAssignee(assignee, task.title);
     }
 
-    function createTask({ title, assignee, location = "none", time = "09:00", endTime = "", prep, followUp = "none", date = state.selectedDate, groupId = "", groupTitle = "", relationLabel = "", reassignedFrom = "", urgent = false, notify = true }) {
+    function createTask({ title, assignee, location = "none", time = "09:00", endTime = "", prep, followUp = "none", date = state.selectedDate, groupId = "", groupTitle = "", relationLabel = "", reassignedFrom = "", urgent = false, notify = true, requestText = "", requestFrom = "" }) {
       state.filter = "all";
       state.tasks.push({
         id: uid(),
@@ -3550,12 +3461,39 @@
         relationLabel,
         assignedAt: "",
         reassignedFrom,
+        requestText,
+        requestFrom,
         prep: prep || suggestPrep(title, location),
         prepReminderSent: false,
         status: "todo",
         urgent
       });
       if (notify) notifyAssignee(assignee, title);
+    }
+
+    function forwardRequestToButler(text, requesterId, reason = "小助手没有足够把握") {
+      const clean = text.replace(/\s+/g, " ").trim();
+      if (!clean) return true;
+      const requesterName = requestSourceText(requesterId);
+      createTask({
+        title: `待确认请求：${requesterName}`,
+        assignee: "driver",
+        date: todayISO(),
+        location: "none",
+        time: minutesToTime(nowMinutes()),
+        prep: "先阅读原始请求，确认日期、人员、执行人和接送安排后，再手动添加日程。",
+        requestText: clean,
+        requestFrom: requesterId,
+        notify: false
+      });
+      pushNotice(`待陈管家确认：${requesterName} 提出「${clean}」。${reason}，请陈管家先确认后再分配。`, ["driver"]);
+      state.notices.unshift({
+        id: uid(),
+        text: `这条内容已完整转给陈管家确认，没有自动添加到其他人的日程：${clean}`,
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
+        targetIds: [requesterId]
+      });
+      return true;
     }
 
     async function parseNaturalRequestWithGPT(text, requesterId) {
@@ -3633,7 +3571,8 @@
           count += 1;
           return;
         }
-        const directAssignees = assigneeIds.length ? assigneeIds : ["driver"];
+        if (!assigneeIds.length) return;
+        const directAssignees = assigneeIds;
         directAssignees.forEach(assignee => {
           createTaskForAssignee({
             title,
@@ -3647,7 +3586,7 @@
           count += 1;
         });
       });
-      if (!count) return false;
+      if (!count) return forwardRequestToButler(originalText, requesterId, "GPT没有给出明确可执行的人员");
       state.notices.unshift({
         id: uid(),
         text: `GPT小助手已把「${originalText}」整理成 ${count} 个安排。`,
@@ -3724,6 +3663,10 @@
       } else if (isScheduleRequest(clean)) {
         const time = extractTime(clean) || inferTimeFromPeriod(clean, "15:00");
         const personIds = detectPersonIds(clean, requesterId);
+        if (!personIds.length) {
+          forwardRequestToButler(clean, requesterId, "没有识别到明确的日程成员");
+          return;
+        }
         const companionIds = detectCompanions(clean);
         const companion = companionIds[0] || (hasCompanionMention(clean) ? detectCompanion(clean) : defaultCompanionForSchedule(clean));
         const dates = repeatDatesForRequest(clean);
@@ -3781,6 +3724,10 @@
         });
       } else if (/打扫|整理|清洁|收拾|卫生|草坪|水系|停车场/.test(clean)) {
         const assignee = detectExplicitAssignee(clean) || detectAssignablePerson(clean, "");
+        if (!assignee) {
+          forwardRequestToButler(clean, requesterId, "没有识别到明确的执行人");
+          return;
+        }
         const dates = repeatDatesForRequest(clean);
         const time = extractTime(clean) || inferTimeFromPeriod(clean, "10:00");
         const location = inferLocation(clean);
@@ -3795,7 +3742,11 @@
           });
         });
       } else if (detectExplicitAssignee(clean) || detectAssignablePerson(clean, "")) {
-        const assignee = detectExplicitAssignee(clean) || detectAssignablePerson(clean, "driver");
+        const assignee = detectExplicitAssignee(clean) || detectAssignablePerson(clean, "");
+        if (!assignee) {
+          forwardRequestToButler(clean, requesterId, "没有识别到明确的执行人");
+          return;
+        }
         const dates = repeatDatesForRequest(clean);
         const time = extractTime(clean) || inferTimeFromPeriod(clean, "09:30");
         dates.forEach(date => {
@@ -3818,14 +3769,8 @@
           prep: "准备清洁用品、垃圾袋和收纳篮，先确认是否有贵重物品。"
         });
       } else if (!isPrivateFeedback) {
-        tasks.push({
-          title: `${requestSourceText(requesterId)}：${clean}`,
-          assignee: "driver",
-          location: "none",
-          time: "09:30",
-          prep: "先确认这件事该由谁处理，再同步给妈妈。"
-        });
-        addFeedback(requesterId, clean);
+        forwardRequestToButler(clean, requesterId, "本地规则没有识别出准确任务");
+        return;
       }
 
       if (tasks.length) {
@@ -4709,6 +4654,9 @@
         const prep = task.prep || suggestPrep(task.title, task.location);
         const canOperate = canOperateTask(task);
         const canManage = canManageTask(task);
+        const requestDetail = task.requestText
+          ? `<div class="request-line">原始请求：${memberById(task.requestFrom).name || "收到新的请求"}：${task.requestText}</div>`
+          : "";
         const card = document.createElement("article");
         card.className = `task ${task.urgent ? "urgent" : ""} ${task.status} ${task.assignedAt ? "assigned" : ""}`;
         card.innerHTML = `
@@ -4721,6 +4669,7 @@
             </div>
             <span class="badge status ${task.status === "done" ? "done" : ""}">${statusText(task.status)}</span>
           </div>
+          ${requestDetail}
           <div class="prep-line">${appLanguage === "en" ? "15-min prep" : "开始前 15 分钟提醒"}：${prep}</div>
           <div class="task-actions">
             ${canOperate ? `<button class="action" type="button" data-action="doing">${appLanguage === "en" ? "Start" : "开始"}</button>` : ""}
@@ -5611,6 +5560,10 @@
       const title = document.getElementById("scheduleTitle").value.trim();
       if (!title) return;
       const personIds = selectedValues(document.getElementById("schedulePerson")).filter(id => id !== "all");
+      if (!personIds.length) {
+        window.alert("请先选择“谁的日程”。");
+        return;
+      }
       const executors = selectedValues(document.getElementById("scheduleCompanion"));
       const companionIds = executors.length ? executors : ["none"];
       const date = document.getElementById("scheduleDate").value || state.selectedDate;
@@ -5630,6 +5583,9 @@
       document.getElementById("scheduleTitle").value = "";
       document.getElementById("scheduleEndTime").value = "";
       document.getElementById("scheduleNoEndTime").checked = true;
+      document.getElementById("scheduleDriver").value = "none";
+      setSelectedValues(document.getElementById("schedulePerson"), []);
+      setSelectedValues(document.getElementById("scheduleCompanion"), []);
       save();
       render();
     });
