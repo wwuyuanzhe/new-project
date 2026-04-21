@@ -1978,6 +1978,7 @@
       }
 
       .mobile-nav button {
+        position: relative;
         min-height: 44px;
         border-radius: 8px;
         background: transparent;
@@ -1988,6 +1989,30 @@
       .mobile-nav button.active {
         background: #111827;
         color: #fff;
+      }
+
+      .mobile-nav-badge {
+        position: absolute;
+        top: 5px;
+        right: 18%;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #ff3b30;
+        color: #fff;
+        border: 2px solid rgba(255, 255, 255, 0.96);
+        font-size: 11px;
+        line-height: 1;
+        font-weight: 950;
+        box-shadow: 0 7px 15px rgba(255, 59, 48, 0.24);
+      }
+
+      .mobile-nav-badge[hidden] {
+        display: none;
       }
 
       .member-sheet {
@@ -2596,7 +2621,7 @@
     <nav class="mobile-nav" id="mobileNav" aria-label="手机底部导航">
       <button type="button" data-mobile-tab="overview" class="active">总览</button>
       <button type="button" data-mobile-tab="add">编辑</button>
-      <button type="button" data-mobile-tab="member">成员</button>
+      <button type="button" data-mobile-tab="member">成员<span class="mobile-nav-badge" id="memberNoticeBadge" hidden>0</span></button>
     </nav>
 
     <div class="member-sheet" id="memberSheet" hidden>
@@ -5803,6 +5828,16 @@
       });
     }
 
+    function unacknowledgedNoticeCount(memberId) {
+      if (!memberId) return 0;
+      return state.notices.filter(notice => {
+        const targets = notice.targetIds || [];
+        return notice.requiresAck
+          && targets.includes(memberId)
+          && !(notice.ackBy || []).includes(memberId);
+      }).length;
+    }
+
     function noticeHtml(notice, viewer) {
       const targets = notice.targetIds || [];
       const canAck = notice.requiresAck && viewer && targets.includes(viewer) && !(notice.ackBy || []).includes(viewer);
@@ -5886,6 +5921,15 @@
         if (button.dataset.mobileTab === "add") button.hidden = !canAddContent();
         button.classList.toggle("active", button.dataset.mobileTab === state.mobileTab);
       });
+      renderMemberNoticeBadge();
+    }
+
+    function renderMemberNoticeBadge() {
+      const badge = document.getElementById("memberNoticeBadge");
+      if (!badge) return;
+      const count = unacknowledgedNoticeCount(state.currentUser);
+      badge.textContent = count > 99 ? "99+" : String(count);
+      badge.hidden = count === 0;
     }
 
     function renderIdentity() {
