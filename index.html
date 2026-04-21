@@ -510,6 +510,12 @@
       min-height: 48px;
     }
 
+    .time-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
     .helper-text {
       color: var(--muted);
       font-size: 13px;
@@ -1765,12 +1771,14 @@
         grid-column: 1 / -1;
       }
 
-      .schedule-form .time-field {
-        align-self: start;
+      .time-pair {
+        grid-column: 1 / -1;
+        grid-template-columns: 1fr;
+        gap: 10px;
       }
 
-      .schedule-form .time-field .inline-option {
-        min-height: 26px;
+      .time-pair .time-field {
+        min-width: 0;
       }
 
       input,
@@ -1997,14 +2005,16 @@
                 <label for="scheduleTitle">描述事项</label>
                 <input id="scheduleTitle" placeholder="例如：音乐课 / 去公司开会" />
               </div>
-              <div class="field time-field">
-                <label for="scheduleTime">开始时间</label>
-                <input id="scheduleTime" type="time" value="15:00" />
-              </div>
-              <div class="field time-field">
-                <label for="scheduleEndTime">结束时间</label>
-                <input id="scheduleEndTime" type="time" />
-                <label class="inline-option"><input id="scheduleNoEndTime" type="checkbox" checked /> 无/不确定</label>
+              <div class="time-pair">
+                <div class="field time-field">
+                  <label for="scheduleTime">开始时间</label>
+                  <input id="scheduleTime" type="time" value="15:00" />
+                </div>
+                <div class="field time-field">
+                  <label for="scheduleEndTime">结束时间</label>
+                  <input id="scheduleEndTime" type="time" />
+                  <label class="inline-option"><input id="scheduleNoEndTime" type="checkbox" checked /> 无/不确定</label>
+                </div>
               </div>
               <div class="field">
                 <label for="scheduleLocation">地点</label>
@@ -2763,9 +2773,12 @@
 
     function displayTaskTitle(task) {
       const name = memberById(task.assignee).name;
-      return String(task.title || "")
-        .replace(new RegExp(`^${name}[：:]\\s*`), "")
-        .trim() || task.title;
+      let title = String(task.title || "").trim();
+      const prefix = new RegExp(`^${name}[：:]\\s*`);
+      while (prefix.test(title)) {
+        title = title.replace(prefix, "").trim();
+      }
+      return title || task.title;
     }
 
     function nowMinutes() {
@@ -3628,11 +3641,16 @@
           const personTasks = dayTasks.filter(task => task.assignee === memberId).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
           if (!personTasks.length) return;
           lines.push(`${memberById(memberId).name}`);
+          const renderedGroups = new Set();
           personTasks.forEach(task => {
             const location = task.location && task.location !== "none" ? `｜地点：${locationById(task.location)}` : "";
-            const follow = shouldShowFollowUp(task) && task.followUp && task.followUp !== "none" ? `｜跟进：${followUpText(task.followUp)}` : "";
+            const follow = !task.groupId && shouldShowFollowUp(task) && task.followUp && task.followUp !== "none" ? `｜陪同/执行：${followUpText(task.followUp)}` : "";
             const relation = task.groupId ? relationSummaryBadgesPlain(task) : "";
-            lines.push(`[${date} ${taskTimeText(task)}] ${memberById(task.assignee).name}：${task.title}${location}${follow}${relation ? `｜${relation}` : ""}`);
+            const line = `[${date} ${taskTimeText(task)}] ${displayTaskTitle(task)}${location}${follow}${relation ? `｜${relation}` : ""}`;
+            const key = task.groupId || line;
+            if (renderedGroups.has(key)) return;
+            renderedGroups.add(key);
+            lines.push(line);
           });
           lines.push("");
         });
@@ -3646,12 +3664,19 @@
     function relationSummaryBadgesPlain(task) {
       if (!task.groupId) return "";
       const groupTasks = state.tasks.filter(item => item.groupId === task.groupId);
-      const people = groupTasks.filter(item => /本人/.test(item.relationLabel || "")).map(item => memberById(item.assignee).name);
-      const rides = groupTasks.filter(item => /接送/.test(item.relationLabel || "")).map(item => memberById(item.assignee).name);
-      const executors = groupTasks.filter(item => /执行|陪同|跟进/.test(item.relationLabel || "")).map(item => memberById(item.assignee).name);
+      const rides = groupTasks
+        .filter(item => {
+          const label = item.relationLabel || "";
+          const text = `${label} ${item.title || ""}`;
+          if (/执行|陪同|跟进|execute|follow/i.test(text)) return false;
+          return /接送|送|接|ride/i.test(text) || ["driver", "driverLei"].includes(item.assignee);
+        })
+        .map(item => memberById(item.assignee).name);
+      const executors = groupTasks
+        .filter(item => /执行|陪同|跟进|execute|follow/i.test(`${item.relationLabel || ""} ${item.title || ""}`) || ["helperA", "helperB", "helperC", "kk", "chef"].includes(item.assignee))
+        .map(item => memberById(item.assignee).name);
       const unique = list => [...new Set(list)].join("、");
       return [
-        people.length ? `人员：${unique(people)}` : "",
         rides.length ? `接送：${unique(rides)}` : "",
         executors.length ? `陪同/执行：${unique(executors)}` : ""
       ].filter(Boolean).join("｜");
@@ -4207,10 +4232,15 @@
       const groupTasks = state.tasks.filter(item => item.groupId === task.groupId);
       if (!groupTasks.length) return "";
       const rides = groupTasks
-        .filter(item => /接送|送|接/.test(item.relationLabel || "") || ["driver", "driverLei"].includes(item.assignee))
+        .filter(item => {
+          const label = item.relationLabel || "";
+          const text = `${label} ${item.title || ""}`;
+          if (/执行|陪同|跟进|execute|follow/i.test(text)) return false;
+          return /接送|送|接|ride/i.test(text) || ["driver", "driverLei"].includes(item.assignee);
+        })
         .map(item => memberById(item.assignee).name);
       const executors = groupTasks
-        .filter(item => /执行|陪同|跟进/.test(item.relationLabel || "") || ["helperA", "helperB", "helperC", "kk", "chef"].includes(item.assignee))
+        .filter(item => /执行|陪同|跟进|execute|follow/i.test(`${item.relationLabel || ""} ${item.title || ""}`) || ["helperA", "helperB", "helperC", "kk", "chef"].includes(item.assignee))
         .map(item => memberById(item.assignee).name);
       const unique = list => [...new Set(list)].join("、");
       return [
