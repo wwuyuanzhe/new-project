@@ -2267,7 +2267,6 @@
               </div>
               <div class="text-actions">
                 <button class="primary" type="button" id="generateExportTextBtn">生成行程文字</button>
-                <button class="action" type="button" id="generateKidsTodayTextBtn">三个孩子今日</button>
                 <button class="action" type="button" id="copyExportTextBtn">复制文字</button>
               </div>
               <textarea id="exportText" readonly placeholder="选择成员和日期后，点“生成行程文字”。"></textarea>
@@ -2394,6 +2393,9 @@
               <b class="dashboard-number" id="upcomingCount">0</b>
               <span class="dashboard-note" id="upcomingText">暂无即将开始事项</span>
             </div>
+          </div>
+          <div class="dashboard-actions">
+            <button class="action" type="button" id="generateKidsTodayTextBtn">今天小朋友</button>
           </div>
           <div class="priority-focus" id="overviewPriorityFocus" hidden>
             <h3>重点</h3>
@@ -3873,9 +3875,38 @@
       document.getElementById("exportStartDate").value = state.selectedDate;
       document.getElementById("exportEndDate").value = state.selectedDate;
       exportScheduleText();
-      pushNotice(`已生成 ${dateShortText(state.selectedDate)} 三个孩子的行程文字。`, kids);
-      save();
-      render();
+      openGeneratedTextSheet(`${dateShortText(state.selectedDate)} 今天小朋友`, document.getElementById("exportText").value);
+    }
+
+    function openGeneratedTextSheet(title, text) {
+      const sheet = document.getElementById("overviewSheet");
+      const content = document.getElementById("overviewSheetContent");
+      const actions = document.getElementById("overviewSheetActions");
+      const closeButton = document.getElementById("closeOverviewSheet");
+      sheet.classList.remove("feedback-sheet");
+      document.getElementById("overviewSheetTitle").textContent = title;
+      closeButton.hidden = false;
+      closeButton.style.display = "";
+      content.innerHTML = "";
+      const textarea = document.createElement("textarea");
+      textarea.id = "generatedTextOutput";
+      textarea.readOnly = true;
+      textarea.value = text;
+      textarea.style.cssText = "width:100%;min-height:260px;border:1px solid rgba(18,24,31,0.12);border-radius:8px;padding:12px;font:inherit;line-height:1.55;background:rgba(247,248,250,0.72);";
+      content.appendChild(textarea);
+      actions.hidden = false;
+      actions.innerHTML = `<button class="action" type="button" id="copyGeneratedTextBtn">复制文字</button>`;
+      document.getElementById("copyGeneratedTextBtn").addEventListener("click", async () => {
+        const textarea = document.getElementById("generatedTextOutput");
+        textarea.focus();
+        textarea.select();
+        try {
+          await navigator.clipboard.writeText(textarea.value);
+        } catch (error) {
+          document.execCommand("copy");
+        }
+      });
+      sheet.hidden = false;
     }
 
     function relationMatchesTask(task, item) {
