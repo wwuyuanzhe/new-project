@@ -3321,53 +3321,40 @@
       }
     ];
 
-    const starterTasks = [
-      { id: uid(), title: "准备早餐和孩子水壶", assignee: "chef", location: "floor1-kitchen", time: "07:00", status: "done", urgent: false },
-      { id: uid(), title: "安排 Aron 去兴趣班", assignee: "driver", location: "outdoor-parking", time: "08:20", status: "doing", urgent: false },
-      { id: uid(), title: "大客厅和餐厅整理", assignee: "helperA", location: "floor1-living", time: "10:00", status: "todo", urgent: false },
-      { id: uid(), title: "陪 Alisa 完成英文阅读", assignee: "kk", location: "floor2-alisa-bedroom", time: "16:30", status: "todo", urgent: false },
-      { id: uid(), title: "检查姥姥今天的药", assignee: "helperB", location: "floor2-grandparents-bedroom", time: "19:00", status: "todo", urgent: false }
-    ];
+    const starterTasks = [];
 
-    const defaultDailyRoutines = {
-      helperA: [
-        { title: "大客厅整理", location: "floor1-living", time: "09:30" },
-        { title: "餐厅整理", location: "floor1-dining", time: "10:15" },
-        { title: "一层卫生间检查", location: "floor1-bathroom", time: "11:00" },
-        { title: "书房简单整理", location: "floor1-study", time: "15:00" }
-      ],
-      helperB: [
-        { title: "姥姥姥爷卧室整理", location: "floor2-grandparents-bedroom", time: "09:00" },
-        { title: "二层客厅整理", location: "floor2-living", time: "10:30" },
-        { title: "检查姥姥姥爷日用品", location: "floor2-grandparents-bedroom", time: "16:00" }
-      ],
-      helperC: [
-        { title: "Angela 卧室整理", location: "floor2-angela-bedroom", time: "09:30" },
-        { title: "Alisa 卧室整理", location: "floor2-alisa-bedroom", time: "10:00" },
-        { title: "Aron 卧室整理", location: "floor2-aron-bedroom", time: "10:30" },
-        { title: "高尔夫球房间整理", location: "floor1-golf", time: "14:30" }
-      ],
-      chef: [
-        { title: "准备早餐", location: "floor1-kitchen", time: "07:00" },
-        { title: "准备午餐", location: "floor1-kitchen", time: "11:30" },
-        { title: "准备晚餐", location: "floor1-kitchen", time: "17:30" },
-        { title: "厨房收尾检查", location: "floor1-kitchen", time: "20:00" }
-      ],
-      driver: [
-        { title: "检查今天用车安排", location: "outdoor-parking", time: "08:00" },
-        { title: "停车场车辆检查", location: "outdoor-parking", time: "09:00" },
-        { title: "确认妈妈今日行程", location: "floor2-mom-bedroom", time: "09:30" }
-      ],
-      driverLei: [
-        { title: "车辆清洁和油电检查", location: "outdoor-parking", time: "08:15" },
-        { title: "确认今日接送路线", location: "outdoor-parking", time: "09:15" }
-      ],
-      kk: [
-        { title: "Angela 学习安排", location: "floor2-angela-bedroom", time: "16:00" },
-        { title: "Alisa 英文阅读", location: "floor2-alisa-bedroom", time: "16:30" },
-        { title: "Aron 亲子阅读", location: "floor2-aron-bedroom", time: "17:00" }
-      ]
-    };
+    const defaultDailyRoutines = {};
+
+    const removedDefaultTitles = new Set([
+      "准备早餐和孩子水壶",
+      "安排 Aron 去兴趣班",
+      "大客厅和餐厅整理",
+      "陪 Alisa 完成英文阅读",
+      "检查姥姥今天的药",
+      "大客厅整理",
+      "餐厅整理",
+      "一层卫生间检查",
+      "书房简单整理",
+      "姥姥姥爷卧室整理",
+      "二层客厅整理",
+      "检查姥姥姥爷日用品",
+      "Angela 卧室整理",
+      "Alisa 卧室整理",
+      "Aron 卧室整理",
+      "高尔夫球房间整理",
+      "准备早餐",
+      "准备午餐",
+      "准备晚餐",
+      "厨房收尾检查",
+      "检查今天用车安排",
+      "停车场车辆检查",
+      "确认妈妈今日行程",
+      "车辆清洁和油电检查",
+      "确认今日接送路线",
+      "Angela 学习安排",
+      "Alisa 英文阅读",
+      "Aron 亲子阅读"
+    ]);
 
     let appLanguage = "zh";
     let dailyRoutines = loadRoutines();
@@ -3417,19 +3404,35 @@
       return normalizeRoutines(routines);
     }
 
+    function normalizedTitleForDefaultCleanup(title) {
+      return String(title || "").replace(/^[^：:]{1,18}[：:]\s*/, "").trim();
+    }
+
+    function isRemovedDefaultTitle(title) {
+      const clean = normalizedTitleForDefaultCleanup(title);
+      return removedDefaultTitles.has(String(title || "").trim()) || removedDefaultTitles.has(clean);
+    }
+
+    function isRemovedDefaultTask(task) {
+      if (!task || !isRemovedDefaultTitle(task.title)) return false;
+      return Boolean(task.routineId) || (!task.groupId && !task.requestText);
+    }
+
     function normalizeRoutines(routines) {
       const normalized = { ...(routines || {}) };
       Object.keys(defaultDailyRoutines).forEach(assignee => {
         if (!normalized[assignee]) normalized[assignee] = defaultDailyRoutines[assignee];
       });
       Object.keys(normalized).forEach(assignee => {
-        normalized[assignee] = (normalized[assignee] || []).map(routine => ({
-          ...routine,
-          id: routine.id || uid(),
-          weekdays: routine.weekdays || [1, 2, 3, 4, 5, 6, 7],
-          location: routine.location || "none",
-          prep: routine.prep || suggestPrep(routine.title, routine.location)
-        }));
+        normalized[assignee] = (normalized[assignee] || [])
+          .filter(routine => !isRemovedDefaultTitle(routine.title))
+          .map(routine => ({
+            ...routine,
+            id: routine.id || uid(),
+            weekdays: routine.weekdays || [1, 2, 3, 4, 5, 6, 7],
+            location: routine.location || "none",
+            prep: routine.prep || suggestPrep(routine.title, routine.location)
+          }));
       });
       return normalized;
     }
@@ -3443,30 +3446,32 @@
         ["检查外婆今天的药", "检查姥姥今天的药"],
         ["客厅和餐厅整理", "大客厅和餐厅整理"]
       ];
-      return tasks.map(task => {
-        const match = replacements.find(([oldTitle]) => task.title === oldTitle);
-        return {
-          ...task,
-          title: match ? match[1] : task.title,
-          status: task.status === "issue" ? "todo" : task.status,
-          urgent: !!task.urgent,
-          date: task.date || todayISO(),
-          location: task.location || "none",
-          followUp: task.followUp || inferFollowUp(task),
-          groupId: task.groupId || "",
-          groupTitle: task.groupTitle || "",
-          relationLabel: task.relationLabel || "",
-          endTime: task.endTime || "",
-          assignedAt: task.assignedAt || "",
-          reassignedFrom: task.reassignedFrom || "",
-          requestText: task.requestText || "",
-          requestFrom: task.requestFrom || "",
-          requestCreatedAt: task.requestCreatedAt || (task.requestText ? now : 0),
-          routineId: task.routineId || "",
-          prep: task.prep || suggestPrep(match ? match[1] : task.title, task.location || "none"),
-          prepReminderSent: task.prepReminderSent || false
-        };
-      });
+      return tasks
+        .map(task => {
+          const match = replacements.find(([oldTitle]) => task.title === oldTitle);
+          return {
+            ...task,
+            title: match ? match[1] : task.title,
+            status: task.status === "issue" ? "todo" : task.status,
+            urgent: !!task.urgent,
+            date: task.date || todayISO(),
+            location: task.location || "none",
+            followUp: task.followUp || inferFollowUp(task),
+            groupId: task.groupId || "",
+            groupTitle: task.groupTitle || "",
+            relationLabel: task.relationLabel || "",
+            endTime: task.endTime || "",
+            assignedAt: task.assignedAt || "",
+            reassignedFrom: task.reassignedFrom || "",
+            requestText: task.requestText || "",
+            requestFrom: task.requestFrom || "",
+            requestCreatedAt: task.requestCreatedAt || (task.requestText ? now : 0),
+            routineId: task.routineId || "",
+            prep: task.prep || suggestPrep(match ? match[1] : task.title, task.location || "none"),
+            prepReminderSent: task.prepReminderSent || false
+          };
+        })
+        .filter(task => !isRemovedDefaultTask(task));
     }
 
     function todayISO() {
@@ -3782,6 +3787,10 @@
       return ["mom", "driver"].includes(state.currentUser);
     }
 
+    function hasOverviewPermission() {
+      return ["mom", "driver", "kk", "dad", "grandpa", "grandma"].includes(state.currentUser);
+    }
+
     function canSeeMomFeedback() {
       return state.currentUser === "mom";
     }
@@ -3799,8 +3808,7 @@
     }
 
     function visibleMemberIdsForCurrentUser() {
-      if (isManagerUser()) return members.map(member => member.id);
-      if (state.currentUser === "kk") return ["kk", "daughter1", "daughter2", "son"];
+      if (hasOverviewPermission()) return members.map(member => member.id);
       return [state.currentUser];
     }
 
@@ -3967,7 +3975,7 @@
       return state.tasks
         .filter(task => dateInRange(task.date || todayISO()))
         .filter(task => !task.requestText)
-        .filter(task => visibleMemberIdsForCurrentUser().includes(task.assignee) || state.selectedMember === "all" && isManagerUser())
+        .filter(task => visibleMemberIdsForCurrentUser().includes(task.assignee) || state.selectedMember === "all" && hasOverviewPermission())
         .filter(task => state.selectedMember === "all" || task.assignee === state.selectedMember)
         .filter(task => {
           if (state.filter === "all") return true;
@@ -3991,7 +3999,7 @@
       const sheetList = document.getElementById("memberSheetList");
       list.innerHTML = "";
       sheetList.innerHTML = "";
-      const visibleMembers = isManagerUser()
+      const visibleMembers = hasOverviewPermission()
         ? members
         : members.filter(member => visibleMemberIdsForCurrentUser().includes(member.id));
       visibleMembers.forEach(member => {
@@ -4064,7 +4072,7 @@
       if (!select) return;
       const previous = selectedValues(select);
       select.innerHTML = "";
-      const allowed = isManagerUser()
+      const allowed = hasOverviewPermission()
         ? members.filter(member => member.id !== "all")
         : members.filter(member => visibleMemberIdsForCurrentUser().includes(member.id));
       allowed.forEach(member => {
@@ -4273,7 +4281,7 @@
       if (exportEndDate && !exportEndDate.value) exportEndDate.value = state.selectedDate;
       if (state.selectedMember !== "all") {
         if (routineAssignee && !selectedValues(routineAssignee).length) setSelectedValues(routineAssignee, [state.selectedMember]);
-      } else if (!isManagerUser() && state.currentUser) {
+      } else if (!hasOverviewPermission() && state.currentUser) {
         if (routineAssignee && !selectedValues(routineAssignee).length) setSelectedValues(routineAssignee, [state.currentUser]);
       } else {
         if (routineAssignee && !selectedValues(routineAssignee).length) setSelectedValues(routineAssignee, ["helperA"]);
@@ -5009,7 +5017,7 @@
     function scheduleTextForMembers(memberIds, start, end) {
       if (!memberIds.length) return "请先选择要导出的成员。";
       const allowed = new Set(visibleMemberIdsForCurrentUser());
-      const selected = memberIds.filter(id => isManagerUser() || allowed.has(id));
+      const selected = memberIds.filter(id => hasOverviewPermission() || allowed.has(id));
       const dateList = datesBetween(start, end);
       const tasks = state.tasks
         .filter(task => selected.includes(task.assignee))
@@ -6330,7 +6338,7 @@
       const dayTasks = selectedDayTasks();
       const overviewRows = priorityRowsFor(dayTasks);
       if (overviewBox && overviewList) {
-        overviewBox.hidden = !(state.selectedMember === "all" && isManagerUser() && overviewRows.length);
+        overviewBox.hidden = !(state.selectedMember === "all" && hasOverviewPermission() && overviewRows.length);
         overviewList.innerHTML = "";
         overviewRows.forEach(row => overviewList.appendChild(createPriorityRow(row)));
       }
@@ -6551,7 +6559,7 @@
     function renderMomDashboard() {
       const dashboard = document.getElementById("momDashboard");
       const dot = document.getElementById("feedbackUnreadDot");
-      const canSee = state.selectedMember === "all" && isManagerUser();
+      const canSee = state.selectedMember === "all" && hasOverviewPermission();
       const feedbackCard = document.querySelector(".dashboard-card.feedback-alert");
       pruneExpiredFeedbacks();
       dashboard.style.display = canSee ? "" : "none";
@@ -6653,7 +6661,7 @@
       const list = document.getElementById("noticeList");
       list.innerHTML = "";
       const viewer = state.selectedMember !== "all" ? state.selectedMember : state.currentUser;
-      const notices = noticesForViewer(viewer, isManagerUser() && state.selectedMember === "all").slice(0, 10);
+      const notices = noticesForViewer(viewer, hasOverviewPermission() && state.selectedMember === "all").slice(0, 10);
       if (!notices.length) {
         list.innerHTML = `<div class="empty">新事项、准备提醒和反馈提示会出现在这里。</div>`;
         return;
@@ -6754,8 +6762,8 @@
     }
 
     function renderMobileShell() {
-      if (!isManagerUser() && state.mobileTab === "overview") {
-        state.mobileTab = canAddContent() ? "add" : "member";
+      if (!hasOverviewPermission() && state.mobileTab === "overview") {
+        state.mobileTab = "member";
       }
       if (!canAddContent() && state.mobileTab === "add") {
         state.mobileTab = "member";
@@ -6764,7 +6772,7 @@
       document.body.classList.toggle("mobile-tab-add", state.mobileTab === "add");
       document.body.classList.toggle("mobile-tab-member", state.mobileTab === "member");
       document.querySelectorAll("[data-mobile-tab]").forEach(button => {
-        if (button.dataset.mobileTab === "overview") button.hidden = !isManagerUser();
+        if (button.dataset.mobileTab === "overview") button.hidden = !hasOverviewPermission();
         if (button.dataset.mobileTab === "add") button.hidden = !canAddContent();
         button.classList.toggle("active", button.dataset.mobileTab === state.mobileTab);
       });
@@ -6787,7 +6795,7 @@
         : "身份：未确认";
       document.getElementById("authSheet").hidden = Boolean(state.currentUser);
       if (!state.currentUser) return;
-      if (!isManagerUser()) {
+      if (!hasOverviewPermission()) {
         const allowed = visibleMemberIdsForCurrentUser();
         if (!allowed.includes(state.selectedMember)) state.selectedMember = state.currentUser;
       }
@@ -6926,8 +6934,8 @@
         return;
       }
       state.currentUser = userId;
-      state.selectedMember = isManagerUser() ? "all" : userId;
-      state.mobileTab = isManagerUser() ? "overview" : canAddContent() ? "add" : "member";
+      state.selectedMember = hasOverviewPermission() ? "all" : userId;
+      state.mobileTab = hasOverviewPermission() ? "overview" : "member";
       document.getElementById("authPin").value = "";
       save();
       render();
@@ -7156,7 +7164,7 @@
         document.getElementById("memberSheet").hidden = false;
         return;
       }
-      if (button.dataset.mobileTab === "overview" && !isManagerUser()) return;
+      if (button.dataset.mobileTab === "overview" && !hasOverviewPermission()) return;
       if (button.dataset.mobileTab === "add" && !canAddContent()) return;
       state.mobileTab = button.dataset.mobileTab;
       if (state.mobileTab === "overview") state.selectedMember = "all";
