@@ -710,6 +710,10 @@
       gap: 12px;
     }
 
+    .visual-board.event-board {
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
     .visual-card {
       background: rgba(255, 255, 255, 0.78);
       border: 1px solid rgba(18, 24, 31, 0.09);
@@ -723,6 +727,73 @@
     .visual-card h3 {
       margin: 0;
       font-size: 16px;
+    }
+
+    .visual-card.event-card {
+      border-left: 4px solid var(--blue);
+      align-content: start;
+    }
+
+    .visual-card.event-card.done {
+      border-left-color: var(--green);
+      background: rgba(247, 250, 248, 0.86);
+    }
+
+    .visual-card.event-card.open {
+      border-left-color: var(--orange);
+    }
+
+    .visual-event-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .visual-time {
+      font-size: 12px;
+      font-weight: 900;
+      color: var(--blue);
+      padding: 5px 8px;
+      border-radius: 8px;
+      background: rgba(0, 122, 255, 0.08);
+      white-space: nowrap;
+    }
+
+    .visual-event-title {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .visual-event-title h3 {
+      overflow-wrap: anywhere;
+      line-height: 1.3;
+    }
+
+    .visual-detail-grid {
+      display: grid;
+      gap: 7px;
+    }
+
+    .visual-detail {
+      display: grid;
+      gap: 2px;
+      padding: 8px 9px;
+      border-radius: 8px;
+      background: rgba(247, 248, 250, 0.78);
+      border: 1px solid rgba(18, 24, 31, 0.07);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .visual-detail span:first-child {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .visual-detail strong {
+      overflow-wrap: anywhere;
     }
 
     .visual-meter {
@@ -3822,7 +3893,9 @@
             location,
             participants: new Set(relations.participants.length ? relations.participants : [memberById(task.assignee).name]),
             rides: new Set(),
-            executors: new Set()
+            executors: new Set(),
+            statuses: new Set(),
+            hasOpen: false
           });
         }
         const row = rows.get(key);
@@ -3832,6 +3905,8 @@
         if (!task.groupId && shouldShowFollowUp(task) && task.followUp && task.followUp !== "none") {
           row.executors.add(followUpText(task.followUp));
         }
+        row.statuses.add(statusText(task.status));
+        if (task.status !== "done") row.hasOpen = true;
       });
       return [...rows.values()]
         .sort((a, b) => a.timeText.localeCompare(b.timeText) || a.title.localeCompare(b.title));
@@ -4521,37 +4596,48 @@
     function renderVisualTasks(container, tasks) {
       container.innerHTML = "";
       const board = document.createElement("div");
-      board.className = "visual-board";
-      const groups = state.selectedMember === "all"
-        ? members.filter(member => member.id !== "all" && tasks.some(task => task.assignee === member.id))
-        : [memberById(state.selectedMember)];
-
-      groups.forEach(member => {
-        const ownTasks = tasks.filter(task => task.assignee === member.id);
-        if (!ownTasks.length) return;
-        const done = ownTasks.filter(task => task.status === "done").length;
-        const percent = Math.round((done / ownTasks.length) * 100);
-        const card = document.createElement("section");
-        card.className = "visual-card";
-        card.innerHTML = `
-          <h3>${member.name}</h3>
-          <div class="visual-meter"><span style="width:${percent}%"></span></div>
-          <div class="routine-meta">${done}/${ownTasks.length} ${appLanguage === "en" ? "done" : "已完成"}</div>
-        `;
-        ownTasks.slice(0, 5).forEach(task => {
-          const item = document.createElement("div");
-          item.className = "visual-task";
-          item.innerHTML = `
-            <strong>${isWeekRange() ? `${dateShortText(task.date || todayISO())} · ` : ""}${taskTimeText(task)} · ${task.title}</strong>
-            <span>${task.location === "none" ? locationById(task.location) : locationById(task.location)} · ${statusText(task.status)}</span>
-            ${shouldShowFollowUp(task) ? `<span>${appLanguage === "en" ? "Follow-up" : "跟进人"}：${followUpText(task.followUp || inferFollowUp(task))}</span>` : ""}
-            <span>${appLanguage === "en" ? "Prep" : "准备"}：${task.prep || suggestPrep(task.title, task.location)}</span>
-          `;
-          card.appendChild(item);
-        });
-        board.appendChild(card);
-      });
+      board.className = "visual-board event-board";
+      const rows = state.selectedMember === "all"
+        ? mergedExportRows(tasks)
+        : mergedSummaryRows(tasks);
+      rows.forEach(row => board.appendChild(createVisualEventCard(row, state.selectedMember === "all")));
       container.appendChild(board);
+    }
+
+    function createVisualEventCard(row, showOwner = false) {
+      const card = document.createElement("section");
+      card.className = `visual-card event-card ${row.hasOpen === false ? "done" : "open"}`;
+      const datePrefix = isWeekRange() ? `${dateShortText(row.date || row.task?.date || todayISO())} · ` : "";
+      const participants = row.participants && row.participants.size
+        ? [...row.participants].join("、")
+        : showOwner && row.task
+          ? memberById(row.task.assignee).name
+          : "";
+      const details = [
+        participants ? ["人员", participants] : null,
+        row.location ? ["地点", row.location] : null,
+        row.rides && row.rides.size ? ["接送", [...row.rides].join("、")] : null,
+        row.executors && row.executors.size ? ["陪同/执行", [...row.executors].join("、")] : null,
+        row.statuses && row.statuses.size ? ["状态", [...row.statuses].join("、")] : null
+      ].filter(Boolean);
+      card.innerHTML = `
+        <div class="visual-event-head">
+          <div class="visual-event-title">
+            <h3>${row.title}</h3>
+            ${participants && !showOwner ? `<span class="dashboard-note">${participants}</span>` : ""}
+          </div>
+          <span class="visual-time">${datePrefix}${row.timeText}</span>
+        </div>
+        <div class="visual-detail-grid">
+          ${details.map(([label, value]) => `
+            <div class="visual-detail">
+              <span>${label}</span>
+              <strong>${value}</strong>
+            </div>
+          `).join("")}
+        </div>
+      `;
+      return card;
     }
 
     function openReassignSheet(task) {
