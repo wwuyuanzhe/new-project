@@ -3016,7 +3016,9 @@
         targetIds: notice.targetIds || [],
         ackBy: notice.ackBy || [],
         requiresAck: !!notice.requiresAck,
-        createdAt: notice.createdAt || Date.now()
+        createdAt: notice.createdAt || Date.now(),
+        taskDate: notice.taskDate || "",
+        taskTime: notice.taskTime || ""
       };
     }
 
@@ -3028,7 +3030,9 @@
         time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
         requiresAck: !!options.requiresAck,
         ackBy: [],
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        taskDate: options.taskDate || "",
+        taskTime: options.taskTime || ""
       });
     }
 
@@ -3046,7 +3050,11 @@
 
     function notifyAssignee(assigneeId, title, task = {}) {
       const assignee = memberById(assigneeId);
-      pushNotice(`收到新事项：${assignee.name} ${taskNoticeTimeText(task)}「${title}」`, [assigneeId], { requiresAck: true });
+      pushNotice(`收到新事项：${assignee.name} ${taskNoticeTimeText(task)}「${title}」`, [assigneeId], {
+        requiresAck: true,
+        taskDate: task.date || state.selectedDate,
+        taskTime: taskTimeText({ time: task.time || "09:00", endTime: task.endTime || "" })
+      });
     }
 
     function requestSourceText(requesterId) {
@@ -4756,6 +4764,7 @@
       const companionText = selectedCompanions.map(id => memberById(id).name).join("、");
       const effectiveRideMode = selectedDrivers.length ? (rideMode || "yes") : "no";
       const followUp = selectedCompanions.length ? selectedCompanions.join(",") : (effectiveRideMode !== "no" ? selectedDrivers.join(",") : "none");
+      const allTargets = [...new Set([...selectedDrivers, ...selectedCompanions, ...personIds].filter(Boolean))];
 
       personIds.forEach(personId => {
         const person = memberById(personId);
@@ -4771,7 +4780,7 @@
           relationLabel: `${person.name}本人`,
           reassignedFrom,
           urgent,
-          notify,
+          notify: false,
           followUp,
           prep: suggestSchedulePrep(personId, title, location)
         });
@@ -4796,7 +4805,7 @@
           relationLabel: `${driver.name}接送`,
           reassignedFrom,
           urgent,
-          notify,
+          notify: false,
           prep: "提前确认人数、路线、车钥匙、停车点和随身物品；接送完成后有变化再反馈。"
         });
         });
@@ -4814,13 +4823,19 @@
           relationLabel: `${memberById(companionId).name}执行`,
           reassignedFrom,
           urgent,
-          notify,
+          notify: false,
           prep: `确认${peopleText}的时间、地点和需要带的物品；有变化再反馈给妈妈或陈管家。`
         });
       });
 
-      if (!reassignedFrom) {
-        pushNotice(`已保存「${groupTitle}」：每个人 1 条主任务，${effectiveRideMode !== "no" ? "接送已合并，" : ""}${companionText ? `跟进人是 ${companionText}。` : "未指定跟进人。"}`, [...selectedDrivers, ...selectedCompanions, ...personIds]);
+      if (notify && !reassignedFrom) {
+        const rideText = effectiveRideMode !== "no" ? `接送：${selectedDrivers.map(id => memberById(id).name).join("、")}。` : "不需要接送。";
+        const executeText = companionText ? `执行/陪同：${companionText}。` : "未指定执行/陪同人。";
+        pushNotice(
+          `新安排：${dateShortText(date)} ${time}${endTime ? `-${endTime}` : ""}「${groupTitle}」。${rideText}${executeText}请确认收到。`,
+          allTargets,
+          { requiresAck: true, taskDate: date, taskTime: `${time}${endTime ? `-${endTime}` : ""}` }
+        );
       }
     }
 
@@ -5310,7 +5325,7 @@
         });
       }
       sourceTask.assignedAt = new Date().toISOString();
-      pushNotice(`陈管家已重新分配「${title}」，旧分配已替换，时间 ${dateShortText(date)} ${time}。`, relatedAssigneeIds(sourceTask), { requiresAck: true });
+      pushNotice(`陈管家已重新分配「${title}」，旧分配已替换，时间 ${dateShortText(date)} ${time}${endTime ? `-${endTime}` : ""}。`, relatedAssigneeIds(sourceTask), { requiresAck: true, taskDate: date, taskTime: `${time}${endTime ? `-${endTime}` : ""}` });
       closeReassignSheet();
       save();
       render();
@@ -5352,7 +5367,7 @@
         notify: false
       });
       const newTargets = [...new Set([...oldTargets, ...people, ...executors, ...selectedDrivers].filter(Boolean))];
-      pushNotice(`事项已更新：${dateShortText(date)} ${time}「${title}」。请 ${memberNamesText(newTargets)} 查看新的安排。`, newTargets, { requiresAck: true });
+      pushNotice(`事项已更新：${dateShortText(date)} ${time}${endTime ? `-${endTime}` : ""}「${title}」。请 ${memberNamesText(newTargets)} 查看新的安排。`, newTargets, { requiresAck: true, taskDate: date, taskTime: `${time}${endTime ? `-${endTime}` : ""}` });
       closeReassignSheet();
       save();
       render();
@@ -5791,8 +5806,12 @@
     function noticeHtml(notice, viewer) {
       const targets = notice.targetIds || [];
       const canAck = notice.requiresAck && viewer && targets.includes(viewer) && !(notice.ackBy || []).includes(viewer);
+      const taskTimeLine = notice.taskDate || notice.taskTime
+        ? `<small>事项时间：${escapeHtml(notice.taskDate ? dateShortText(notice.taskDate) : "")} ${escapeHtml(notice.taskTime || "")}</small>`
+        : "";
       return `
         <div>${escapeHtml(notice.time)}  ${escapeHtml(notice.text)}</div>
+        ${taskTimeLine}
         ${canAck ? `<div class="task-actions"><button class="action" type="button" data-ack-notice="${notice.id}">确认收到</button></div>` : ""}
         ${notice.requiresAck && !canAck ? `<small>已确认：${escapeHtml(memberNamesText(notice.ackBy || [])) || "无"}</small>` : ""}
       `;
