@@ -487,12 +487,13 @@
       grid-column: span 1;
     }
 
-    .schedule-form .field:nth-child(3) {
-      grid-column: span 2;
+    .schedule-form .field:nth-child(4),
+    #schedulePreview {
+      grid-column: 1 / -1;
     }
 
     .schedule-form .primary {
-      grid-column: span 4;
+      grid-column: 1 / -1;
     }
 
     .quick-form textarea {
@@ -1555,9 +1556,7 @@
       padding: 11px;
       border-radius: 8px;
       border: 1px solid rgba(18, 24, 31, 0.08);
-      background:
-        linear-gradient(135deg, rgba(var(--progress-rgb, 0, 122, 255), 0.12), rgba(255, 255, 255, 0.78) 48%),
-        rgba(255, 255, 255, 0.72);
+      background: rgba(255, 255, 255, 0.76);
       font-size: 13px;
       box-shadow: var(--glow);
     }
@@ -1581,8 +1580,8 @@
 
     .bar {
       grid-column: 1 / -1;
-      height: 12px;
-      background: rgba(18, 24, 31, 0.06);
+      height: 10px;
+      background: linear-gradient(180deg, rgba(18, 24, 31, 0.07), rgba(18, 24, 31, 0.04));
       border-radius: 999px;
       overflow: hidden;
       box-shadow: inset 0 0 0 1px rgba(18, 24, 31, 0.04);
@@ -1590,21 +1589,21 @@
 
     .fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--progress-soft, #8fd8ff), var(--progress-strong, #007aff));
+      background: linear-gradient(90deg, #7fc4ff, #007aff);
       width: 0%;
       border-radius: inherit;
-      box-shadow: 0 0 18px rgba(var(--progress-rgb, 0, 122, 255), 0.24);
+      box-shadow: 0 0 16px rgba(0, 122, 255, 0.22);
       transition: width 0.24s ease;
     }
 
     .progress-row.good .fill {
-      background: linear-gradient(90deg, var(--progress-soft, #7ee2a8), var(--progress-strong, #30d158));
-      box-shadow: 0 0 18px rgba(var(--progress-rgb, 48, 209, 88), 0.22);
+      background: linear-gradient(90deg, #7fc4ff, #007aff);
+      box-shadow: 0 0 16px rgba(0, 122, 255, 0.22);
     }
 
     .progress-row.busy .fill {
-      background: linear-gradient(90deg, var(--progress-soft, #ffd18a), var(--progress-strong, #ff9f0a));
-      box-shadow: 0 0 18px rgba(var(--progress-rgb, 255, 159, 10), 0.2);
+      background: linear-gradient(90deg, #7fc4ff, #007aff);
+      box-shadow: 0 0 16px rgba(0, 122, 255, 0.22);
     }
 
     .progress-row.idle {
@@ -1612,16 +1611,16 @@
     }
 
     .progress-row.idle .fill {
-      background: linear-gradient(90deg, #c7f3d6, #30d158);
-      box-shadow: 0 0 18px rgba(48, 209, 88, 0.18);
+      background: linear-gradient(90deg, #7fc4ff, #007aff);
+      box-shadow: 0 0 16px rgba(0, 122, 255, 0.18);
     }
 
     .schedule-preview {
       display: grid;
-      gap: 8px;
-      padding: 12px;
+      gap: 10px;
+      padding: 13px;
       border-radius: 8px;
-      background: rgba(247, 248, 250, 0.78);
+      background: rgba(247, 248, 250, 0.66);
       border: 1px solid rgba(18, 24, 31, 0.08);
       box-shadow: var(--glow);
     }
@@ -1634,7 +1633,8 @@
 
     .schedule-preview-list {
       display: grid;
-      gap: 7px;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 8px;
     }
 
     .schedule-preview-item {
@@ -1723,17 +1723,19 @@
 
       .identity-bar {
         position: static;
-        width: auto;
+        width: 100%;
         max-width: 100%;
         min-width: 0;
-        justify-self: end;
-        justify-content: flex-end;
-        gap: 14px;
+        justify-self: stretch;
+        justify-content: space-between;
+        gap: 24px;
       }
 
       .identity-pill {
         flex: 0 1 auto;
+        order: 2;
         min-width: 0;
+        max-width: 190px;
         min-height: 30px;
         padding: 0 9px;
         font-size: 12px;
@@ -1743,6 +1745,7 @@
       }
 
       .inbox-pill {
+        order: 1;
         width: 34px;
         height: 30px;
         flex: 0 0 auto;
@@ -2087,9 +2090,15 @@
       .schedule-form .field:nth-child(1),
       .schedule-form .field:nth-child(2),
       .schedule-form .field:nth-child(3),
+      .schedule-form .field:nth-child(4),
       .schedule-form .field:nth-child(9),
+      #schedulePreview,
       .schedule-form .primary {
         grid-column: 1 / -1;
+      }
+
+      .schedule-preview-list {
+        grid-template-columns: 1fr;
       }
 
       .time-pair {
@@ -5315,10 +5324,6 @@
           const row = document.createElement("div");
           const stateClass = ownTasks.length === 0 ? "idle" : open === 0 ? "good" : percent < 45 ? "busy" : "";
           row.className = `progress-row clickable ${stateClass}`;
-          const hue = ownTasks.length === 0 ? 145 : Math.round(30 + displayPercent * 1.15);
-          row.style.setProperty("--progress-soft", `hsl(${hue}, 82%, 78%)`);
-          row.style.setProperty("--progress-strong", `hsl(${hue}, 78%, 45%)`);
-          row.style.setProperty("--progress-rgb", hue < 70 ? "255, 159, 10" : hue < 130 ? "52, 199, 89" : "0, 122, 255");
           row.innerHTML = `
             <strong>${member.name}</strong>
             <span class="progress-count">${done}/${ownTasks.length}</span>
