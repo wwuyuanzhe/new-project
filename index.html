@@ -2304,6 +2304,10 @@
         display: none !important;
       }
 
+      .mobile-nav button[hidden] {
+        display: none !important;
+      }
+
       .panel {
         border-radius: 20px;
         box-shadow: 0 10px 26px rgba(22, 28, 35, 0.1), var(--glow);
@@ -6809,7 +6813,7 @@
       if (!state.currentUser) return;
       if (!hasOverviewPermission()) {
         state.selectedMember = state.currentUser;
-        if (state.mobileTab === "overview") state.mobileTab = "member";
+        if (state.mobileTab !== "add" || !canAddContent()) state.mobileTab = "member";
       }
       if (!canAddContent() && state.mobileTab === "add") {
         state.mobileTab = "member";
@@ -6822,7 +6826,15 @@
       }
     }
 
+    function setPanelDisplay(id, show) {
+      const element = document.getElementById(id);
+      if (!element) return;
+      element.hidden = !show;
+      element.style.display = show ? "" : "none";
+    }
+
     function renderPanelVisibility() {
+      normalizeNavigationState();
       if (!hasOverviewPermission() && state.mobileTab === "overview") {
         state.mobileTab = "member";
       }
@@ -6833,10 +6845,17 @@
       document.body.classList.toggle("mobile-tab-add", state.mobileTab === "add");
       document.body.classList.toggle("mobile-tab-member", state.mobileTab === "member");
       document.querySelectorAll("[data-mobile-tab]").forEach(button => {
-        if (button.dataset.mobileTab === "overview") button.hidden = !hasOverviewPermission();
-        if (button.dataset.mobileTab === "add") button.hidden = !canAddContent();
+        const hideOverview = button.dataset.mobileTab === "overview" && !hasOverviewPermission();
+        const hideAdd = button.dataset.mobileTab === "add" && !canAddContent();
+        button.hidden = hideOverview || hideAdd;
+        button.style.display = button.hidden ? "none" : "";
         button.classList.toggle("active", button.dataset.mobileTab === state.mobileTab);
       });
+      setPanelDisplay("overviewPanel", state.mobileTab === "overview" && hasOverviewPermission());
+      setPanelDisplay("quickPanel", state.mobileTab === "add" && canAddContent());
+      setPanelDisplay("routinePanel", state.mobileTab === "add" && canAddContent());
+      setPanelDisplay("taskPanel", state.mobileTab === "member");
+      setPanelDisplay("memberPanel", false);
     }
 
     function renderMemberNoticeBadge() {
@@ -6887,6 +6906,7 @@
         pruneExpiredFeedbacks();
         pruneOldRawRequests();
         syncRecurringRoutines();
+        normalizeNavigationState();
         document.querySelectorAll("[data-date-text]").forEach(element => {
           element.textContent = selectedDateDisplayText();
         });
