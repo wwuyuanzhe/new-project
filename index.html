@@ -330,6 +330,50 @@
       box-shadow: 0 10px 22px rgba(0, 122, 255, 0.24), var(--glow);
     }
 
+    .picker-source {
+      display: none;
+    }
+
+    .member-picker {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+      gap: 8px;
+    }
+
+    .member-pick {
+      min-height: 46px;
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font: inherit;
+      font-weight: 800;
+      box-shadow: var(--glow);
+    }
+
+    .member-pick.active {
+      border-color: rgba(0, 122, 255, 0.34);
+      background: rgba(235, 245, 255, 0.95);
+      color: var(--blue);
+    }
+
+    .member-pick .mini-avatar {
+      width: 27px;
+      height: 27px;
+      border-radius: 999px;
+      display: inline-grid;
+      place-items: center;
+      background: rgba(18, 24, 31, 0.08);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
     .action-pane[hidden] {
       display: none;
     }
@@ -2164,10 +2208,9 @@
             <h2 id="quickPanelTitle">快速处理</h2>
           </div>
           <div class="mode-tabs" id="actionTabs">
-            <button class="mode-tab active" type="button" data-action-mode="natural">一句话</button>
-            <button class="mode-tab" type="button" data-action-mode="schedule">日程/事项</button>
-            <button class="mode-tab" type="button" data-action-mode="text">文字导入/导出</button>
-            <button class="mode-tab" type="button" data-action-mode="feedback">给妈妈反馈</button>
+            <button class="mode-tab active" type="button" data-action-mode="natural">Ai输入</button>
+            <button class="mode-tab" type="button" data-action-mode="schedule">写日程</button>
+            <button class="mode-tab" type="button" data-action-mode="text">日程变文字</button>
           </div>
           <div class="action-pane" id="naturalPanel">
             <form class="quick-form" id="naturalForm">
@@ -2229,10 +2272,11 @@
                   <option value="dad">爸爸</option>
                   <option value="grandma">姥姥</option>
                   <option value="grandpa">姥爷</option>
+                  <option value="chef">齐厨师</option>
                   <option value="kk">家庭教师 KK</option>
                 </select>
               </div>
-            <button class="primary" type="submit">保存日程/事项</button>
+            <button class="primary" type="submit">保存日程</button>
           </form>
             <div class="helper-text">接送人默认无；如果选择接送人或执行人，小助手会自动生成本人、接送人和执行人的事项。</div>
           </div>
@@ -3120,6 +3164,57 @@
         });
       }
       renderExportMembers();
+      renderMemberPickers();
+    }
+
+    function pickerLabelFor(value, select) {
+      if (value === "none") return select.id.includes("Driver") ? "无" : "不指定";
+      return memberById(value).name || value;
+    }
+
+    function pickerInitialFor(value, label) {
+      if (value === "none") return "无";
+      const member = memberById(value);
+      return member.initials || label.slice(0, 1).toUpperCase();
+    }
+
+    function renderPickerForSelect(select, single = false) {
+      if (!select) return;
+      select.classList.add("picker-source");
+      let picker = select.nextElementSibling;
+      if (!picker || !picker.classList.contains("member-picker")) {
+        picker = document.createElement("div");
+        picker.className = "member-picker";
+        select.insertAdjacentElement("afterend", picker);
+      }
+      picker.innerHTML = "";
+      Array.from(select.options).forEach(option => {
+        const label = pickerLabelFor(option.value, select);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `member-pick ${option.selected ? "active" : ""}`;
+        button.innerHTML = `<span class="mini-avatar">${pickerInitialFor(option.value, label)}</span><span>${label}</span>`;
+        button.addEventListener("click", () => {
+          if (single || !select.multiple) {
+            select.value = option.value;
+          } else if (option.value === "none") {
+            Array.from(select.options).forEach(item => { item.selected = item.value === "none"; });
+          } else {
+            option.selected = !option.selected;
+            const none = Array.from(select.options).find(item => item.value === "none");
+            if (none) none.selected = false;
+          }
+          renderPickerForSelect(select, single);
+        });
+        picker.appendChild(button);
+      });
+    }
+
+    function renderMemberPickers() {
+      renderPickerForSelect(document.getElementById("scheduleDriver"), true);
+      renderPickerForSelect(document.getElementById("scheduleCompanion"), false);
+      renderPickerForSelect(document.getElementById("reassignDriver"), true);
+      renderPickerForSelect(document.getElementById("reassignExecutors"), false);
     }
 
     function renderExportMembers() {
@@ -3153,6 +3248,7 @@
       Array.from(select.options).forEach(option => {
         option.selected = wanted.has(option.value);
       });
+      renderMemberPickers();
     }
 
     function renderLocations() {
@@ -3220,7 +3316,7 @@
       const selected = memberById(state.selectedMember);
       const feedbackPanel = document.getElementById("feedbackPanel");
       const speaker = currentSpeakerId();
-      if (speaker === "mom" && state.actionMode === "feedback") {
+      if (state.actionMode === "feedback") {
         state.actionMode = "natural";
       }
       feedbackPanel.hidden = state.actionMode !== "feedback" || speaker === "mom";
@@ -3233,12 +3329,12 @@
 
     function renderActionTabs() {
       const speaker = currentSpeakerId();
-      if (speaker === "mom" && state.actionMode === "feedback") {
+      if (state.actionMode === "feedback") {
         state.actionMode = "natural";
       }
       document.querySelectorAll("[data-action-mode]").forEach(button => {
         const isFeedback = button.dataset.actionMode === "feedback";
-        button.hidden = speaker === "mom" && isFeedback;
+        button.hidden = isFeedback;
         button.classList.toggle("active", button.dataset.actionMode === state.actionMode);
       });
       document.getElementById("naturalPanel").hidden = state.actionMode !== "natural";
