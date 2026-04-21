@@ -1499,6 +1499,14 @@
       box-shadow: var(--glow);
     }
 
+    .notice small {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
     .feedback {
       border-radius: 8px;
       padding: 12px;
@@ -2837,7 +2845,7 @@
       reassignMode: "assign",
       currentUser: localStorage.getItem("familyCurrentUser") || "",
       tasks: loadTasks(),
-      notices: JSON.parse(localStorage.getItem("familyNotices") || "[]"),
+      notices: JSON.parse(localStorage.getItem("familyNotices") || "[]").map(normalizeNotice),
       feedbacks: JSON.parse(localStorage.getItem("familyFeedbacks") || "[]"),
       feedbackReadAt: Number(localStorage.getItem("familyFeedbackReadAt") || 0)
     };
@@ -3001,12 +3009,26 @@
       if (state.currentUser) localStorage.setItem("familyCurrentUser", state.currentUser);
     }
 
-    function pushNotice(text, targetIds = []) {
+    function normalizeNotice(notice) {
+      return {
+        ...notice,
+        id: notice.id || uid(),
+        targetIds: notice.targetIds || [],
+        ackBy: notice.ackBy || [],
+        requiresAck: !!notice.requiresAck,
+        createdAt: notice.createdAt || Date.now()
+      };
+    }
+
+    function pushNotice(text, targetIds = [], options = {}) {
       state.notices.unshift({
         id: uid(),
         text,
         targetIds: [...new Set((targetIds || []).filter(Boolean))],
-        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
+        requiresAck: !!options.requiresAck,
+        ackBy: [],
+        createdAt: Date.now()
       });
     }
 
@@ -3016,9 +3038,15 @@
         .join("、");
     }
 
-    function notifyAssignee(assigneeId, title) {
+    function taskNoticeTimeText(task) {
+      const date = dateShortText(task.date || state.selectedDate);
+      const time = taskTimeText({ time: task.time || "09:00", endTime: task.endTime || "" });
+      return `${date} ${time}`;
+    }
+
+    function notifyAssignee(assigneeId, title, task = {}) {
       const assignee = memberById(assigneeId);
-      pushNotice(`收到新事项：${assignee.name}「${title}」`, [assigneeId]);
+      pushNotice(`收到新事项：${assignee.name} ${taskNoticeTimeText(task)}「${title}」`, [assigneeId], { requiresAck: true });
     }
 
     function requestSourceText(requesterId) {
@@ -3611,7 +3639,11 @@
         status: "todo",
         urgent: false
       });
-      notifyAssignee(assignee, routine.title);
+      notifyAssignee(assignee, routine.title, {
+        date: state.selectedDate,
+        time: routine.time,
+        endTime: routine.endTime || ""
+      });
       save();
       render();
     }
@@ -3691,7 +3723,7 @@
         status: "todo",
         urgent: false
       });
-      notifyAssignee(assignee, task.title);
+      notifyAssignee(assignee, task.title, task);
     }
 
     function createTask({ title, assignee, location = "none", time = "09:00", endTime = "", prep, followUp = "none", date = state.selectedDate, groupId = "", groupTitle = "", relationLabel = "", reassignedFrom = "", urgent = false, notify = true, requestText = "", requestFrom = "", requestCreatedAt = 0 }) {
@@ -3718,7 +3750,7 @@
         status: "todo",
         urgent
       });
-      if (notify) notifyAssignee(assignee, title);
+      if (notify) notifyAssignee(assignee, title, { date, time, endTime });
     }
 
     function forwardRequestToButler(text, requesterId, reason = "小助手没有足够把握") {
@@ -4817,18 +4849,40 @@
         : `${selected.name}${appLanguage === "en" ? ` ${rangeText} tasks` : `的${rangeText}任务`}`;
       list.innerHTML = "";
       const tasks = visibleTasks();
+      const shouldShowMemberNotices = state.selectedMember !== "all" && !isSimpleWorker(state.selectedMember);
+      if (shouldShowMemberNotices) renderMemberNoticeCards(list, state.selectedMember);
 
       if (!tasks.length) {
-        list.innerHTML = `<div class="empty">这里暂时没有任务。妈妈添加后，对应的人就能看到。</div>`;
+        list.insertAdjacentHTML("beforeend", `<div class="empty">这里暂时没有任务。妈妈添加后，对应的人就能看到。</div>`);
         return;
       }
 
       if (state.viewMode === "visual") {
         renderVisualTasks(list, tasks);
+        if (shouldShowMemberNotices) renderMemberNoticeCards(list, state.selectedMember, true);
         return;
       }
 
       renderTaskItems(list, tasks);
+    }
+
+    function renderMemberNoticeCards(container, memberId, prepend = false) {
+      const notices = noticesForViewer(memberId, false)
+        .filter(notice => notice.requiresAck && !(notice.ackBy || []).includes(memberId))
+        .slice(0, 3);
+      const fragment = document.createDocumentFragment();
+      notices.forEach(notice => {
+        const item = document.createElement("div");
+        item.className = "notice";
+        item.innerHTML = noticeHtml(notice, memberId);
+        fragment.appendChild(item);
+      });
+      if (prepend && container.firstChild) {
+        container.insertBefore(fragment, container.firstChild);
+      } else {
+        container.appendChild(fragment);
+      }
+      attachNoticeAckHandlers(container, memberId);
     }
 
     function renderTaskItems(list, tasks) {
@@ -4972,13 +5026,21 @@
       const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
       const current = tasks.find(task => timeToMinutes(task.time || "09:00") <= nowMinutes) || tasks[0];
       const next = tasks.find(task => current && task.id !== current.id && timeToMinutes(task.time || "09:00") >= timeToMinutes(current.time || "09:00"));
+      const workerNotices = noticesForViewer(state.selectedMember, false)
+        .filter(notice => notice.requiresAck && !(notice.ackBy || []).includes(state.selectedMember))
+        .slice(0, 3);
+      const workerNoticeHtml = workerNotices.length
+        ? `<div class="worker-next"><span class="worker-mini-label">新消息</span>${workerNotices.map(notice => `<div class="notice">${noticeHtml(notice, state.selectedMember)}</div>`).join("")}</div>`
+        : "";
 
       if (!current) {
-        content.innerHTML = `<div class="empty">${dayLabel}暂时没有需要处理的事项。可以点下面的“本周”查看未来安排。</div>`;
+        content.innerHTML = `${workerNoticeHtml}<div class="empty">${dayLabel}暂时没有需要处理的事项。可以点下面的“本周”查看未来安排。</div>`;
+        attachNoticeAckHandlers(content, state.selectedMember);
         return;
       }
 
       content.innerHTML = `
+        ${workerNoticeHtml}
         <div class="worker-now">
           <span class="worker-mini-label">现在要做</span>
           <h3>${taskTimeText(current)} · ${current.title}</h3>
@@ -5002,6 +5064,7 @@
       content.querySelectorAll("[data-worker-action]").forEach(button => {
         button.addEventListener("click", () => updateTask(button.dataset.taskId, button.dataset.workerAction));
       });
+      attachNoticeAckHandlers(content, state.selectedMember);
     }
 
     function canSeeButlerInbox() {
@@ -5247,7 +5310,7 @@
         });
       }
       sourceTask.assignedAt = new Date().toISOString();
-      pushNotice(`陈管家已重新分配「${title}」，旧分配已替换，时间 ${dateShortText(date)} ${time}。`, relatedAssigneeIds(sourceTask));
+      pushNotice(`陈管家已重新分配「${title}」，旧分配已替换，时间 ${dateShortText(date)} ${time}。`, relatedAssigneeIds(sourceTask), { requiresAck: true });
       closeReassignSheet();
       save();
       render();
@@ -5289,7 +5352,7 @@
         notify: false
       });
       const newTargets = [...new Set([...oldTargets, ...people, ...executors, ...selectedDrivers].filter(Boolean))];
-      pushNotice(`事项已更新：${dateShortText(date)} ${time}「${title}」。请 ${memberNamesText(newTargets)} 查看新的安排。`, newTargets);
+      pushNotice(`事项已更新：${dateShortText(date)} ${time}「${title}」。请 ${memberNamesText(newTargets)} 查看新的安排。`, newTargets, { requiresAck: true });
       closeReassignSheet();
       save();
       render();
@@ -5703,13 +5766,7 @@
       const list = document.getElementById("noticeList");
       list.innerHTML = "";
       const viewer = state.selectedMember !== "all" ? state.selectedMember : state.currentUser;
-      const notices = state.notices
-        .filter(notice => {
-          const targets = notice.targetIds || [];
-          if (isManagerUser() && state.selectedMember === "all") return true;
-          return !targets.length || targets.includes(viewer);
-        })
-        .slice(0, 10);
+      const notices = noticesForViewer(viewer, isManagerUser() && state.selectedMember === "all").slice(0, 10);
       if (!notices.length) {
         list.innerHTML = `<div class="empty">新事项、准备提醒和反馈提示会出现在这里。</div>`;
         return;
@@ -5717,9 +5774,43 @@
       notices.forEach(notice => {
         const item = document.createElement("div");
         item.className = "notice";
-        item.textContent = `${notice.time}  ${notice.text}`;
+        item.innerHTML = noticeHtml(notice, viewer);
         list.appendChild(item);
       });
+      attachNoticeAckHandlers(list, viewer);
+    }
+
+    function noticesForViewer(viewer, includeAll = false) {
+      return state.notices.filter(notice => {
+        const targets = notice.targetIds || [];
+        if (includeAll) return true;
+        return !targets.length || targets.includes(viewer);
+      });
+    }
+
+    function noticeHtml(notice, viewer) {
+      const targets = notice.targetIds || [];
+      const canAck = notice.requiresAck && viewer && targets.includes(viewer) && !(notice.ackBy || []).includes(viewer);
+      return `
+        <div>${escapeHtml(notice.time)}  ${escapeHtml(notice.text)}</div>
+        ${canAck ? `<div class="task-actions"><button class="action" type="button" data-ack-notice="${notice.id}">确认收到</button></div>` : ""}
+        ${notice.requiresAck && !canAck ? `<small>已确认：${escapeHtml(memberNamesText(notice.ackBy || [])) || "无"}</small>` : ""}
+      `;
+    }
+
+    function attachNoticeAckHandlers(container, viewer) {
+      container.querySelectorAll("[data-ack-notice]").forEach(button => {
+        button.addEventListener("click", () => acknowledgeNotice(button.dataset.ackNotice, viewer));
+      });
+    }
+
+    function acknowledgeNotice(noticeId, memberId) {
+      const notice = state.notices.find(item => item.id === noticeId);
+      if (!notice || !memberId) return;
+      if (!notice.ackBy) notice.ackBy = [];
+      if (!notice.ackBy.includes(memberId)) notice.ackBy.push(memberId);
+      save();
+      render();
     }
 
     function renderPrivateFeedback() {
