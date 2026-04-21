@@ -1285,6 +1285,14 @@
       background: rgba(255, 248, 235, 0.82);
     }
 
+    .priority-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .priority-focus h3 {
       margin: 0;
       font-size: 14px;
@@ -1929,8 +1937,7 @@
       body.mobile-tab-overview #overviewPanel,
       body.mobile-tab-add #quickPanel,
       body.mobile-tab-add #routinePanel,
-      body.mobile-tab-member #taskPanel,
-      body.mobile-tab-member #workerTodayPanel {
+      body.mobile-tab-member #taskPanel {
         display: block !important;
       }
 
@@ -1947,6 +1954,8 @@
         display: none !important;
       }
 
+      #workerTodayPanel,
+      body.mobile-tab-member #workerTodayPanel,
       body.mobile-tab-member .layout:not(.simple-worker-mode) #workerTodayPanel {
         display: none !important;
       }
@@ -2607,9 +2616,12 @@
             </div>
           </div>
           <div class="priority-focus" id="memberPriorityFocus" hidden>
-            <div class="text-actions">
-              <button class="action" type="button" id="memberTodayTextBtn">今天文字</button>
-              <button class="action" type="button" id="memberTomorrowTextBtn">明天文字</button>
+            <div class="priority-head">
+              <h3>今日重点</h3>
+              <div class="text-actions">
+                <button class="action" type="button" id="memberTodayTextBtn">今天文字</button>
+                <button class="action" type="button" id="memberTomorrowTextBtn">明天文字</button>
+              </div>
             </div>
             <div class="dashboard-list" id="memberPriorityList"></div>
           </div>
@@ -3673,7 +3685,7 @@
     function applySimpleWorkerLayout() {
       const simple = isSimpleWorker(state.selectedMember);
       document.querySelector(".layout").classList.toggle("simple-worker-mode", simple);
-      document.getElementById("workerTodayPanel").hidden = !simple;
+      document.getElementById("workerTodayPanel").hidden = true;
       document.getElementById("quickPanel").style.display = simple || !canAddContent() ? "none" : "";
       document.getElementById("routinePanel").style.display = simple || !canAddContent() ? "none" : "";
       document.querySelector(".right").style.display = simple ? "none" : "";
@@ -3715,6 +3727,7 @@
           <button class="routine-button ${state.editingRoutineIndex === index ? "active" : ""}" type="button" data-action="add">
             <span class="routine-title">${routine.title}</span>
             <span class="routine-meta">${taskTimeText(routine)} · ${locationById(routine.location)}</span>
+            <span class="routine-meta">执行人：${selected.name}</span>
             <span class="routine-meta">每周：${weekdayText(routine.weekdays)}</span>
             <span class="routine-meta">提前准备：${routine.prep || suggestPrep(routine.title, routine.location)}</span>
           </button>
@@ -4999,7 +5012,7 @@
         : `${selected.name}${appLanguage === "en" ? ` ${rangeText} tasks` : `的${rangeText}任务`}`;
       list.innerHTML = "";
       const tasks = visibleTasks();
-      const shouldShowMemberNotices = state.selectedMember !== "all" && !isSimpleWorker(state.selectedMember);
+      const shouldShowMemberNotices = state.selectedMember !== "all";
       if (shouldShowMemberNotices) renderMemberNoticeCards(list, state.selectedMember);
 
       if (!tasks.length) {
