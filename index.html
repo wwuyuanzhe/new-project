@@ -1913,6 +1913,41 @@
       box-shadow: var(--glow);
     }
 
+    .task-feedback-form {
+      display: grid;
+      gap: 14px;
+      padding: 0 18px 18px;
+    }
+
+    .task-feedback-context {
+      border-radius: 16px;
+      padding: 13px 14px;
+      background: rgba(247, 248, 250, 0.9);
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      color: var(--muted);
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .task-feedback-form textarea {
+      width: 100%;
+      min-height: 128px;
+      resize: vertical;
+      border-radius: 18px;
+      border: 1px solid rgba(18, 24, 31, 0.1);
+      background: rgba(255, 255, 255, 0.94);
+      padding: 15px;
+      font: inherit;
+      line-height: 1.55;
+      outline: none;
+      box-shadow: 0 10px 28px rgba(22, 28, 35, 0.06), var(--glow);
+    }
+
+    .task-feedback-form textarea:focus {
+      border-color: rgba(0, 122, 255, 0.42);
+      box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1), var(--glow);
+    }
+
     .summary {
       padding: 14px;
       display: grid;
@@ -3231,6 +3266,21 @@
       </div>
     </div>
 
+    <div class="member-sheet" id="taskFeedbackSheet" hidden>
+      <div class="member-sheet-backdrop" id="taskFeedbackBackdrop"></div>
+      <div class="member-sheet-panel">
+        <div class="panel-head">
+          <h2>事项反馈</h2>
+          <button class="action" type="button" id="closeTaskFeedbackSheet">关闭</button>
+        </div>
+        <form class="task-feedback-form" id="taskFeedbackForm">
+          <div class="task-feedback-context" id="taskFeedbackContext">填写这项任务的反馈，只有妈妈可以查看。</div>
+          <textarea id="taskFeedbackText" placeholder="例如：已经到达，但时间有变化；或需要妈妈确认下一步。"></textarea>
+          <button class="primary" type="submit">提交反馈</button>
+        </form>
+      </div>
+    </div>
+
     <div class="member-sheet" id="authSheet" hidden>
       <div class="member-sheet-backdrop"></div>
       <div class="member-sheet-panel auth-sheet-panel">
@@ -3382,6 +3432,7 @@
     let cloudSaveTimer = null;
     let lastCloudUpdatedAt = localStorage.getItem("familyCloudUpdatedAt") || "";
     let isApplyingCloudState = false;
+    let activeFeedbackTaskId = "";
 
     const state = {
       selectedMember: "all",
@@ -5155,7 +5206,9 @@
 
     function eventLocationTextForTask(task) {
       const primary = primaryEventTask(task);
-      const location = primary.location && primary.location !== "none" ? primary.location : task.location;
+      const location = task.groupId
+        ? primary.location
+        : (primary.location && primary.location !== "none" ? primary.location : task.location);
       return location && location !== "none" ? locationById(location) : "";
     }
 
@@ -5615,7 +5668,7 @@
         groupId,
         groupTitle,
         relationLabel: `${driver.name}接送`,
-        location: location === "none" ? "outdoor-parking" : location
+        location
       }));
 
       const companionTasks = [];
@@ -5688,7 +5741,7 @@
           title: rideTitle,
           assignee: driverId,
           date,
-          location: location === "none" ? "outdoor-parking" : location,
+          location,
           time: effectiveRideMode === "pickup" ? time : minutesToTime(clampDayMinutes(start - 30)),
           groupId,
           groupTitle,
@@ -5859,8 +5912,9 @@
       const showAssignee = state.selectedMember === "all";
       const dateBadge = isWeekRange() ? `<span class="badge">${dateShortText(task.date || todayISO())}</span>` : "";
       const assigneeBadge = showAssignee ? `<span class="badge">${assignee.name}</span>` : "";
-      const locationBadge = task.location && task.location !== "none"
-        ? `<span class="badge">${locationById(task.location)}</span>`
+      const locationText = eventLocationTextForTask(task);
+      const locationBadge = locationText
+        ? `<span class="badge">${locationText}</span>`
         : "";
       const participants = task.groupId ? collectRelationNames(task).participants : [];
       const participantBadge = participants.length > 1
@@ -5905,7 +5959,7 @@
           <div class="task-actions">
             ${canOperate ? `<button class="action" type="button" data-action="doing">${appLanguage === "en" ? "Start" : "开始"}</button>` : ""}
             ${canOperate ? `<button class="action" type="button" data-action="done">${appLanguage === "en" ? "Done" : "完成"}</button>` : ""}
-            ${canOperate ? `<button class="action warn" type="button" data-action="feedback">${appLanguage === "en" ? "Feedback" : "反馈"}</button>` : ""}
+            ${canOperate ? `<button class="action" type="button" data-action="feedback">${appLanguage === "en" ? "Feedback" : "反馈"}</button>` : ""}
             <button class="action ${task.urgent ? "danger" : ""}" type="button" data-action="priority">${task.urgent ? "取消重点" : "重点"}</button>
             ${canManage ? `<button class="action" type="button" data-action="edit">编辑</button>` : ""}
             ${canManage && task.assignee === "driver" ? `<button class="action" type="button" data-action="assign">${task.assignedAt ? "再次分配" : "分配"}</button>` : ""}
@@ -5955,19 +6009,19 @@
           <span class="worker-mini-label">现在要做</span>
           <h3>${taskTimeText(current)} · ${current.title}</h3>
           <div class="task-meta">
-            <span class="badge">${locationById(current.location)}</span>
+            ${eventLocationTextForTask(current) ? `<span class="badge">${eventLocationTextForTask(current)}</span>` : ""}
             <span class="badge">${statusText(current.status)}</span>
           </div>
           <div class="prep-line">准备：${current.prep || suggestPrep(current.title, current.location)}</div>
           <div class="task-actions">
             <button class="action" type="button" data-worker-action="done" data-task-id="${current.id}">完成</button>
-            <button class="action warn" type="button" data-worker-action="feedback" data-task-id="${current.id}">反馈</button>
+            <button class="action" type="button" data-worker-action="feedback" data-task-id="${current.id}">反馈</button>
           </div>
         </div>
         <div class="worker-next">
           <span class="worker-mini-label">下一个</span>
           <strong>${next ? `${taskTimeText(next)} · ${next.title}` : `${dayLabel}后面暂无事项`}</strong>
-          ${next ? `<span class="dashboard-note">${locationById(next.location)} · ${next.prep || suggestPrep(next.title, next.location)}</span>` : ""}
+          ${next ? `<span class="dashboard-note">${[eventLocationTextForTask(next), next.prep || suggestPrep(next.title, next.location)].filter(Boolean).join(" · ")}</span>` : ""}
         </div>
       `;
 
@@ -6281,15 +6335,8 @@
         }
       }
       if (action === "feedback") {
-        const text = window.prompt(`请输入关于「${task.title}」的反馈内容`);
-        if (text && text.trim()) {
-          addFeedback(task.assignee, `关于「${task.title}」：${text.trim()}`);
-          state.notices.unshift({
-            id: uid(),
-            text: `${memberById(task.assignee).name} 提交了事项反馈：「${task.title}」。`,
-            time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
-          });
-        }
+        openTaskFeedbackSheet(task);
+        return;
       }
       if (action === "assign") {
         openReassignSheet(task);
@@ -6308,6 +6355,39 @@
         pushNotice(`删除事项：${memberById(task.assignee).name} 的「${task.title}」。`, relatedAssigneeIds(task));
         state.tasks = state.tasks.filter(item => item.id !== id);
       }
+      save();
+      render();
+    }
+
+    function openTaskFeedbackSheet(task) {
+      activeFeedbackTaskId = task.id;
+      const sheet = document.getElementById("taskFeedbackSheet");
+      const context = document.getElementById("taskFeedbackContext");
+      const text = document.getElementById("taskFeedbackText");
+      context.textContent = `关于「${contextualTaskTitle(task) || displayTaskTitle(task)}」的反馈，提交后只给妈妈查看。`;
+      text.value = "";
+      sheet.hidden = false;
+      setTimeout(() => text.focus(), 80);
+    }
+
+    function closeTaskFeedbackSheet() {
+      activeFeedbackTaskId = "";
+      document.getElementById("taskFeedbackSheet").hidden = true;
+      document.getElementById("taskFeedbackText").value = "";
+    }
+
+    function submitTaskFeedback() {
+      const task = state.tasks.find(item => item.id === activeFeedbackTaskId);
+      const text = document.getElementById("taskFeedbackText").value.trim();
+      if (!task || !text) return;
+      const title = contextualTaskTitle(task) || displayTaskTitle(task);
+      addFeedback(task.assignee, `关于「${title}」：${text}`);
+      state.notices.unshift({
+        id: uid(),
+        text: `${memberById(task.assignee).name} 提交了事项反馈：「${title}」。`,
+        time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      });
+      closeTaskFeedbackSheet();
       save();
       render();
     }
@@ -7172,6 +7252,13 @@
 
     document.getElementById("clearImportTextBtn").addEventListener("click", () => {
       document.getElementById("importText").value = "";
+    });
+
+    document.getElementById("closeTaskFeedbackSheet").addEventListener("click", closeTaskFeedbackSheet);
+    document.getElementById("taskFeedbackBackdrop").addEventListener("click", closeTaskFeedbackSheet);
+    document.getElementById("taskFeedbackForm").addEventListener("submit", event => {
+      event.preventDefault();
+      submitTaskFeedback();
     });
 
     document.getElementById("feedbackForm").addEventListener("submit", event => {
