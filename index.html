@@ -6800,6 +6800,29 @@
     }
 
     function renderMobileShell() {
+      normalizeNavigationState();
+      renderPanelVisibility();
+      renderMemberNoticeBadge();
+    }
+
+    function normalizeNavigationState() {
+      if (!state.currentUser) return;
+      if (!hasOverviewPermission()) {
+        state.selectedMember = state.currentUser;
+        if (state.mobileTab === "overview") state.mobileTab = "member";
+      }
+      if (!canAddContent() && state.mobileTab === "add") {
+        state.mobileTab = "member";
+      }
+      if (state.selectedMember !== "all" && state.mobileTab === "overview") {
+        state.mobileTab = "member";
+      }
+      if (state.selectedMember === "all" && state.mobileTab === "member") {
+        state.selectedMember = state.currentUser;
+      }
+    }
+
+    function renderPanelVisibility() {
       if (!hasOverviewPermission() && state.mobileTab === "overview") {
         state.mobileTab = "member";
       }
@@ -6814,7 +6837,6 @@
         if (button.dataset.mobileTab === "add") button.hidden = !canAddContent();
         button.classList.toggle("active", button.dataset.mobileTab === state.mobileTab);
       });
-      renderMemberNoticeBadge();
     }
 
     function renderMemberNoticeBadge() {
@@ -6837,6 +6859,7 @@
         const allowed = visibleMemberIdsForCurrentUser();
         if (!allowed.includes(state.selectedMember)) state.selectedMember = state.currentUser;
       }
+      normalizeNavigationState();
     }
 
     function renderFilters() {
@@ -7199,6 +7222,13 @@
       const button = event.target.closest("button[data-mobile-tab]");
       if (!button) return;
       if (button.dataset.mobileTab === "member") {
+        if (!hasOverviewPermission()) {
+          state.selectedMember = state.currentUser;
+          state.mobileTab = "member";
+          render();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
         document.getElementById("memberSheet").hidden = false;
         return;
       }
