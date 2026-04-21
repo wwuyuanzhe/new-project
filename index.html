@@ -5197,6 +5197,7 @@
         const key = `${task.date || todayISO()}|${timeText}|${title}|${location}|${participantKey}`;
         if (!rows.has(key)) {
           rows.set(key, {
+            task,
             date: task.date || todayISO(),
             timeText,
             title,
@@ -6375,7 +6376,7 @@
       const item = document.createElement("div");
       item.className = "dashboard-row clickable";
       const people = row.participants.size ? ` · ${[...row.participants].join("、")}` : "";
-      const title = state.selectedMember === "all" ? row.title : contextualTaskTitle(row.task);
+      const title = state.selectedMember === "all" ? row.title : (contextualTaskTitle(row.task) || row.title);
       item.innerHTML = `<strong>${row.timeText}  ${title}</strong><span class="badge urgent">重点${people}</span>`;
       item.addEventListener("click", () => {
         const tasks = state.tasks.filter(task => task.urgent && eventTitleForTask(task) === row.title && eventTimeTextForTask(task) === row.timeText);
@@ -6443,6 +6444,7 @@
     }
 
     function contextualTaskTitle(task, forceContext = false) {
+      if (!task) return "";
       const title = eventTitleForTask(task);
       const people = collectRelationNames(task).participants;
       if (!people.length) return title;
@@ -6514,8 +6516,8 @@
       item.className = "notice sheet-task-item";
       const status = [...row.statuses].join("、");
       const relation = summaryRelationText(row);
-      const person = showPerson ? `${memberById(row.task.assignee).name}：` : "";
-      const title = contextualTaskTitle(row.task);
+      const person = showPerson && row.task ? `${memberById(row.task.assignee).name}：` : "";
+      const title = contextualTaskTitle(row.task) || row.title;
       item.innerHTML = `
         <span class="sheet-task-time">${row.timeText}</span>
         <span class="sheet-task-title">${person}${title}（${status}）${relation ? `<br><small>${relation}</small>` : ""}</span>
