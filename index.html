@@ -1497,6 +1497,16 @@
       border-color: rgba(255, 149, 0, 0.18);
     }
 
+    .member-notice-strip {
+      display: grid;
+      gap: 10px;
+      padding: 12px 14px 4px;
+    }
+
+    .member-notice-strip[hidden] {
+      display: none;
+    }
+
     .red-dot {
       display: inline-grid;
       place-items: center;
@@ -3045,6 +3055,7 @@
             </div>
             <div class="dashboard-list" id="memberPriorityList"></div>
           </div>
+          <div class="member-notice-strip" id="memberNoticeStrip" hidden></div>
           <div class="task-toolbar" id="filters">
           <button class="chip active" type="button" data-range="day">当天</button>
           <button class="chip" type="button" data-range="week">本周</button>
@@ -5728,6 +5739,7 @@
 
     function renderTasks() {
       const list = document.getElementById("taskList");
+      const noticeStrip = document.getElementById("memberNoticeStrip");
       const title = document.getElementById("taskPanelTitle");
       const selected = memberById(state.selectedMember);
       const rangeText = !isWeekRange()
@@ -5737,9 +5749,13 @@
         ? `${rangeText}${appLanguage === "en" ? " tasks" : "任务"}`
         : `${selected.name}${appLanguage === "en" ? ` ${rangeText} tasks` : `的${rangeText}任务`}`;
       list.innerHTML = "";
+      if (noticeStrip) {
+        noticeStrip.innerHTML = "";
+        noticeStrip.hidden = state.selectedMember === "all";
+      }
       const tasks = visibleTasks();
       const shouldShowMemberNotices = state.selectedMember !== "all";
-      if (shouldShowMemberNotices) renderMemberNoticeCards(list, state.selectedMember);
+      if (shouldShowMemberNotices && noticeStrip) renderMemberNoticeCards(noticeStrip, state.selectedMember);
 
       if (!tasks.length) {
         list.insertAdjacentHTML("beforeend", `<div class="empty">这里暂时没有任务。妈妈添加后，对应的人就能看到。</div>`);
@@ -5748,7 +5764,6 @@
 
       if (state.viewMode === "visual") {
         renderVisualTasks(list, tasks);
-        if (shouldShowMemberNotices) renderMemberNoticeCards(list, state.selectedMember, true);
         return;
       }
 
@@ -5772,6 +5787,7 @@
         container.appendChild(fragment);
       }
       attachNoticeAckHandlers(container, memberId);
+      container.hidden = !notices.length;
     }
 
     function renderTaskItems(list, tasks) {
@@ -5873,7 +5889,7 @@
         card.innerHTML = `
           <div class="task-top">
             <div>
-              <h3 class="task-title">${displayTaskTitle(task)}</h3>
+              <h3 class="task-title">${state.selectedMember === "all" ? displayTaskTitle(task) : contextualTaskTitle(task)}</h3>
               <div class="task-meta">
                 ${taskMetaBadges(task)}
               </div>
@@ -6355,7 +6371,8 @@
       const item = document.createElement("div");
       item.className = "dashboard-row clickable";
       const people = row.participants.size ? ` · ${[...row.participants].join("、")}` : "";
-      item.innerHTML = `<strong>${row.timeText}  ${row.title}</strong><span class="badge urgent">重点${people}</span>`;
+      const title = state.selectedMember === "all" ? row.title : contextualTaskTitle(row.task);
+      item.innerHTML = `<strong>${row.timeText}  ${title}</strong><span class="badge urgent">重点${people}</span>`;
       item.addEventListener("click", () => {
         const tasks = state.tasks.filter(task => task.urgent && eventTitleForTask(task) === row.title && eventTimeTextForTask(task) === row.timeText);
         openTaskSummary("重点事项", tasks, { groupByPerson: true });
@@ -6409,6 +6426,26 @@
 
     function summaryTitle(task) {
       return eventTitleForTask(task);
+    }
+
+    function removePeoplePrefix(title, people) {
+      let clean = String(title || "").trim();
+      const joined = people.join("、");
+      if (joined && clean.startsWith(joined)) clean = clean.slice(joined.length).trim();
+      people.forEach(name => {
+        if (clean.startsWith(name)) clean = clean.slice(name.length).trim();
+      });
+      return clean || title;
+    }
+
+    function contextualTaskTitle(task, forceContext = false) {
+      const title = eventTitleForTask(task);
+      const people = collectRelationNames(task).participants;
+      if (!people.length) return title;
+      const assigneeName = memberById(task.assignee).name;
+      const isParticipant = people.includes(assigneeName) || /本人/.test(task.relationLabel || "");
+      if (!forceContext && isParticipant) return title;
+      return `${people.join("、")} ${removePeoplePrefix(title, people)}`.trim();
     }
 
     function mergeKeyForSummary(task) {
@@ -6474,9 +6511,10 @@
       const status = [...row.statuses].join("、");
       const relation = summaryRelationText(row);
       const person = showPerson ? `${memberById(row.task.assignee).name}：` : "";
+      const title = contextualTaskTitle(row.task);
       item.innerHTML = `
         <span class="sheet-task-time">${row.timeText}</span>
-        <span class="sheet-task-title">${person}${row.title}（${status}）${relation ? `<br><small>${relation}</small>` : ""}</span>
+        <span class="sheet-task-title">${person}${title}（${status}）${relation ? `<br><small>${relation}</small>` : ""}</span>
       `;
       return item;
     }
