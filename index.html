@@ -2302,6 +2302,7 @@
           <h2>总览</h2>
         </div>
         <div class="summary">
+          <div class="person-progress" id="progressList"></div>
           <div class="dashboard-list" id="daypartList"></div>
         </div>
         <div class="panel-head">
@@ -4703,6 +4704,76 @@
       return index === -1 ? important.length : index;
     }
 
+    function isRelationTask(task) {
+      return /接送|送|接|ride|执行|陪同|跟进|execute|follow/i.test(`${task.relationLabel || ""} ${task.title || ""}`)
+        || ["driver", "driverLei", "helperA", "helperB", "helperC", "kk", "chef"].includes(task.assignee);
+    }
+
+    function summaryTitle(task) {
+      return task.groupTitle || displayTaskTitle(task);
+    }
+
+    function mergeKeyForSummary(task) {
+      if (task.groupId && isRelationTask(task)) return `group|${task.assignee}|${task.groupId}`;
+      const title = summaryTitle(task);
+      const location = task.location && task.location !== "none" ? locationById(task.location) : "";
+      return `semantic|${task.assignee}|${task.date || todayISO()}|${taskTimeText(task)}|${title}|${location}`;
+    }
+
+    function mergedSummaryRows(tasks) {
+      const rows = new Map();
+      tasks.forEach(task => {
+        const key = mergeKeyForSummary(task);
+        if (!rows.has(key)) {
+          const relations = collectRelationNames(task);
+          rows.set(key, {
+            task,
+            timeText: taskTimeText(task),
+            title: summaryTitle(task),
+            location: task.location && task.location !== "none" ? locationById(task.location) : "",
+            rides: new Set(relations.rides),
+            executors: new Set(relations.executors),
+            statuses: new Set(),
+            hasOpen: false,
+            count: 0
+          });
+        }
+        const row = rows.get(key);
+        const relations = collectRelationNames(task);
+        relations.rides.forEach(name => row.rides.add(name));
+        relations.executors.forEach(name => row.executors.add(name));
+        if (!task.groupId && shouldShowFollowUp(task) && task.followUp && task.followUp !== "none") {
+          row.executors.add(followUpText(task.followUp));
+        }
+        row.statuses.add(statusText(task.status));
+        if (task.status !== "done") row.hasOpen = true;
+        row.count += 1;
+      });
+      return [...rows.values()]
+        .sort((a, b) => a.timeText.localeCompare(b.timeText) || a.title.localeCompare(b.title));
+    }
+
+    function summaryRelationText(row) {
+      return [
+        row.location ? `地点：${row.location}` : "",
+        row.rides.size ? `接送：${[...row.rides].join("、")}` : "",
+        row.executors.size ? `陪同/执行：${[...row.executors].join("、")}` : ""
+      ].filter(Boolean).join("｜");
+    }
+
+    function createSummaryItem(row, showPerson = false) {
+      const item = document.createElement("div");
+      item.className = "notice sheet-task-item";
+      const status = [...row.statuses].join("、");
+      const relation = summaryRelationText(row);
+      const person = showPerson ? `${memberById(row.task.assignee).name}：` : "";
+      item.innerHTML = `
+        <span class="sheet-task-time">${row.timeText}</span>
+        <span class="sheet-task-title">${person}${row.title}（${status}）${relation ? `<br><small>${relation}</small>` : ""}</span>
+      `;
+      return item;
+    }
+
     function renderGroupedTaskSummary(content, tasks) {
       const grouped = new Map();
       tasks
@@ -4716,25 +4787,15 @@
         const member = memberById(assignee);
         const group = document.createElement("div");
         group.className = "sheet-person-group";
-        const openCount = personTasks.filter(task => task.status !== "done").length;
+        const rows = mergedSummaryRows(personTasks);
+        const openCount = rows.filter(row => row.hasOpen).length;
         group.innerHTML = `
           <div class="sheet-person-title">
             <span>${member.name}</span>
-            <span class="badge">${openCount} 未完成 / ${personTasks.length} 项</span>
+            <span class="badge">${openCount} 未完成 / ${rows.length} 项</span>
           </div>
         `;
-        personTasks
-          .slice()
-          .sort((a, b) => (a.time || "").localeCompare(b.time || ""))
-          .forEach(task => {
-            const item = document.createElement("div");
-            item.className = "notice sheet-task-item";
-            item.innerHTML = `
-              <span class="sheet-task-time">${taskTimeText(task)}</span>
-              <span class="sheet-task-title">${task.title}（${statusText(task.status)}）</span>
-            `;
-            group.appendChild(item);
-          });
+        rows.forEach(row => group.appendChild(createSummaryItem(row)));
         content.appendChild(group);
       });
     }
@@ -4756,12 +4817,7 @@
       } else if (options.groupByPerson) {
         renderGroupedTaskSummary(content, tasks);
       } else {
-        tasks.forEach(task => {
-          const item = document.createElement("div");
-          item.className = "notice";
-          item.textContent = `${taskTimeText(task)}  ${memberById(task.assignee).name}：${task.title}（${statusText(task.status)}）`;
-          content.appendChild(item);
-        });
+        mergedSummaryRows(tasks).forEach(row => content.appendChild(createSummaryItem(row, true)));
       }
       sheet.hidden = false;
     }
