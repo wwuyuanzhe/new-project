@@ -489,6 +489,21 @@
       flex-wrap: wrap;
     }
 
+    .inline-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .inline-option input {
+      width: auto;
+      min-height: auto;
+    }
+
     .helper-text {
       color: var(--muted);
       font-size: 13px;
@@ -1478,7 +1493,6 @@
       body.mobile-tab-overview #overviewPanel,
       body.mobile-tab-add #quickPanel,
       body.mobile-tab-add #routinePanel,
-      body.mobile-tab-add #textExchangePanel,
       body.mobile-tab-member #taskPanel,
       body.mobile-tab-member #workerTodayPanel {
         display: block !important;
@@ -1493,8 +1507,7 @@
       body.mobile-tab-member #memberPanel,
       body.mobile-tab-member #overviewPanel,
       body.mobile-tab-member #quickPanel,
-      body.mobile-tab-member #routinePanel,
-      body.mobile-tab-member #textExchangePanel {
+      body.mobile-tab-member #routinePanel {
         display: none !important;
       }
 
@@ -1697,7 +1710,7 @@
       .schedule-form .field:nth-child(2),
       .schedule-form .field:nth-child(3),
       .schedule-form .field:nth-child(5),
-      .schedule-form .field:nth-child(8),
+      .schedule-form .field:nth-child(9),
       .schedule-form .primary {
         grid-column: 1 / -1;
       }
@@ -1895,6 +1908,7 @@
           <div class="mode-tabs" id="actionTabs">
             <button class="mode-tab active" type="button" data-action-mode="natural">一句话</button>
             <button class="mode-tab" type="button" data-action-mode="schedule">日程/事项</button>
+            <button class="mode-tab" type="button" data-action-mode="text">文字导入/导出</button>
             <button class="mode-tab" type="button" data-action-mode="feedback">给妈妈反馈</button>
           </div>
           <div class="action-pane" id="naturalPanel">
@@ -1924,6 +1938,11 @@
               <div class="field">
                 <label for="scheduleTime">开始时间</label>
                 <input id="scheduleTime" type="time" value="15:00" />
+              </div>
+              <div class="field">
+                <label for="scheduleEndTime">结束时间</label>
+                <input id="scheduleEndTime" type="time" />
+                <label class="inline-option"><input id="scheduleNoEndTime" type="checkbox" checked /> 无/不确定</label>
               </div>
               <div class="field">
                 <label for="scheduleLocation">地点</label>
@@ -1967,8 +1986,44 @@
                 <label for="feedbackText">只给妈妈看的内容</label>
                 <textarea id="feedbackText" placeholder="例如：今天 Aron 有点咳嗽，想提醒妈妈看一下"></textarea>
               </div>
-              <button class="primary" type="submit">发给妈妈</button>
+            <button class="primary" type="submit">发给妈妈</button>
             </form>
+          </div>
+          <div class="action-pane" id="textExchangePanel" hidden>
+            <div class="text-tool">
+              <div class="text-tool-grid">
+                <div class="field">
+                  <label for="exportMembers">选择成员（可多选）</label>
+                  <select id="exportMembers" multiple></select>
+                </div>
+                <div class="field">
+                  <label for="exportStartDate">开始日期</label>
+                  <input id="exportStartDate" type="date" />
+                </div>
+                <div class="field">
+                  <label for="exportEndDate">结束日期</label>
+                  <input id="exportEndDate" type="date" />
+                </div>
+              </div>
+              <div class="text-actions">
+                <button class="primary" type="button" id="generateExportTextBtn">生成行程文字</button>
+                <button class="action" type="button" id="copyExportTextBtn">复制文字</button>
+              </div>
+              <textarea id="exportText" readonly placeholder="选择成员和日期后，点“生成行程文字”。"></textarea>
+            </div>
+            <div class="text-tool">
+              <div class="field">
+                <label for="importText">粘贴文字批量导入</label>
+                <textarea id="importText" placeholder="每行一个事项，例如：
+[2026-04-22 15:00] Aron：网球课｜地点：九龙塘｜执行人：服务员 A
+明天 20点 妈妈、Angela、Alisa、Aron 去音乐会，陈管家送，服务员A、B陪同"></textarea>
+              </div>
+              <div class="text-actions">
+                <button class="primary" type="button" id="importTextBtn">批量导入事项</button>
+                <button class="action" type="button" id="clearImportTextBtn">清空</button>
+              </div>
+              <div class="helper-text">导入时会逐行识别；有明确日期就按文字里的日期，没有日期就按当前选择日期。</div>
+            </div>
           </div>
           <div class="notice-list add-result-list" id="addResultList"></div>
         </section>
@@ -2004,46 +2059,6 @@
             <button class="primary" type="submit">保存日常</button>
           </form>
           <div class="routine-list" id="routineList"></div>
-        </section>
-
-        <section class="panel" id="textExchangePanel">
-          <div class="panel-head">
-            <h2>文字导出/导入</h2>
-          </div>
-          <div class="text-tool">
-            <div class="text-tool-grid">
-              <div class="field">
-                <label for="exportMembers">选择成员（可多选）</label>
-                <select id="exportMembers" multiple></select>
-              </div>
-              <div class="field">
-                <label for="exportStartDate">开始日期</label>
-                <input id="exportStartDate" type="date" />
-              </div>
-              <div class="field">
-                <label for="exportEndDate">结束日期</label>
-                <input id="exportEndDate" type="date" />
-              </div>
-            </div>
-            <div class="text-actions">
-              <button class="primary" type="button" id="generateExportTextBtn">生成行程文字</button>
-              <button class="action" type="button" id="copyExportTextBtn">复制文字</button>
-            </div>
-            <textarea id="exportText" readonly placeholder="选择成员和日期后，点“生成行程文字”。"></textarea>
-          </div>
-          <div class="text-tool">
-            <div class="field">
-              <label for="importText">粘贴文字批量导入</label>
-              <textarea id="importText" placeholder="每行一个事项，例如：
-[2026-04-22 15:00] Aron：网球课｜地点：九龙塘｜执行人：服务员 A
-明天 20点 妈妈、Angela、Alisa、Aron 去音乐会，陈管家送，服务员A、B陪同"></textarea>
-            </div>
-            <div class="text-actions">
-              <button class="primary" type="button" id="importTextBtn">批量导入事项</button>
-              <button class="action" type="button" id="clearImportTextBtn">清空</button>
-            </div>
-            <div class="helper-text">导入时会逐行识别；有明确日期就按文字里的日期，没有日期就按当前选择日期。</div>
-          </div>
         </section>
 
         <section class="panel" id="taskPanel">
@@ -2098,12 +2113,12 @@
               <b class="dashboard-number" id="todayIssueCount">0</b>
               <span class="dashboard-note" id="todayIssueText">查看今天时段安排</span>
             </div>
-            <div class="dashboard-card">
+            <div class="dashboard-card" id="openTasksCard">
               <span class="dashboard-label" id="dayOpenLabel">当天未完成</span>
               <b class="dashboard-number" id="todayOpenCount">0</b>
               <span class="dashboard-note" id="todayBusyText">今天暂时没有待办</span>
             </div>
-            <div class="dashboard-card">
+            <div class="dashboard-card" id="upcomingCard">
               <span class="dashboard-label">马上开始</span>
               <b class="dashboard-number" id="upcomingCount">0</b>
               <span class="dashboard-note" id="upcomingText">暂无即将开始事项</span>
@@ -2437,6 +2452,7 @@
           groupId: task.groupId || "",
           groupTitle: task.groupTitle || "",
           relationLabel: task.relationLabel || "",
+          endTime: task.endTime || "",
           assignedAt: task.assignedAt || "",
           reassignedFrom: task.reassignedFrom || "",
           prep: task.prep || suggestPrep(match ? match[1] : task.title, task.location || "none"),
@@ -2671,6 +2687,11 @@
     function timeToMinutes(time) {
       const [hours, minutes] = time.split(":").map(Number);
       return hours * 60 + minutes;
+    }
+
+    function taskTimeText(task) {
+      const start = task.time || "--:--";
+      return task.endTime ? `${start}-${task.endTime}` : start;
     }
 
     function nowMinutes() {
@@ -2930,6 +2951,7 @@
       document.getElementById("naturalPanel").hidden = state.actionMode !== "natural";
       document.getElementById("linkedSchedulePanel").hidden = state.actionMode !== "schedule";
       document.getElementById("feedbackPanel").hidden = state.actionMode !== "feedback" || speaker === "mom";
+      document.getElementById("textExchangePanel").hidden = state.actionMode !== "text";
     }
 
     function isSimpleWorker(memberId) {
@@ -2942,7 +2964,6 @@
       document.getElementById("workerTodayPanel").hidden = !simple;
       document.getElementById("quickPanel").style.display = simple || !canAddContent() ? "none" : "";
       document.getElementById("routinePanel").style.display = simple || !canAddContent() ? "none" : "";
-      document.getElementById("textExchangePanel").style.display = simple || !canAddContent() ? "none" : "";
       document.querySelector(".right").style.display = simple ? "none" : "";
     }
 
@@ -3033,6 +3054,7 @@
         date: state.selectedDate,
         location: routine.location,
         time: routine.time,
+        endTime: routine.endTime || "",
         prep: routine.prep || suggestPrep(routine.title, routine.location),
         prepReminderSent: false,
         status: "todo",
@@ -3105,6 +3127,7 @@
         date: task.date || state.selectedDate,
         location: task.location || "none",
         time: task.time || "09:00",
+        endTime: task.endTime || "",
         followUp: task.followUp || "none",
         groupId: task.groupId || "",
         groupTitle: task.groupTitle || "",
@@ -3119,7 +3142,7 @@
       notifyAssignee(assignee, task.title);
     }
 
-    function createTask({ title, assignee, location = "none", time = "09:00", prep, followUp = "none", date = state.selectedDate, groupId = "", groupTitle = "", relationLabel = "", reassignedFrom = "" }) {
+    function createTask({ title, assignee, location = "none", time = "09:00", endTime = "", prep, followUp = "none", date = state.selectedDate, groupId = "", groupTitle = "", relationLabel = "", reassignedFrom = "" }) {
       state.filter = "all";
       state.tasks.push({
         id: uid(),
@@ -3128,6 +3151,7 @@
         date,
         location,
         time,
+        endTime,
         followUp,
         groupId,
         groupTitle,
@@ -3313,11 +3337,12 @@
         const dates = repeatDatesForRequest(clean);
         dates.forEach(date => {
           if (personIds.length > 1 || companionIds.length > 1) {
-            addLinkedScheduleBatch({
-              personIds,
-              title: extractActivityTitle(clean),
-              time,
-              location: inferLocation(clean),
+        addLinkedScheduleBatch({
+          personIds,
+          title: extractActivityTitle(clean),
+          time,
+          endTime: "",
+          location: inferLocation(clean),
               rideMode: inferRideMode(clean),
               companionIds: companionIds.length ? companionIds : [companion],
               driverId: detectDriver(clean),
@@ -3329,6 +3354,7 @@
             personId: personIds[0] || personId,
             title: extractActivityTitle(clean),
             time,
+            endTime: "",
             location: inferLocation(clean),
             rideMode: inferRideMode(clean),
             companionId: companion,
@@ -3527,7 +3553,7 @@
             const location = task.location && task.location !== "none" ? `｜地点：${locationById(task.location)}` : "";
             const follow = shouldShowFollowUp(task) && task.followUp && task.followUp !== "none" ? `｜跟进：${followUpText(task.followUp)}` : "";
             const relation = task.groupId ? relationSummaryBadgesPlain(task) : "";
-            lines.push(`[${date} ${task.time || "09:00"}] ${memberById(task.assignee).name}：${task.title}${location}${follow}${relation ? `｜${relation}` : ""}`);
+            lines.push(`[${date} ${taskTimeText(task)}] ${memberById(task.assignee).name}：${task.title}${location}${follow}${relation ? `｜${relation}` : ""}`);
           });
           lines.push("");
         });
@@ -3568,19 +3594,20 @@
     }
 
     function importStructuredLine(line, fallbackDate) {
-      const match = line.match(/^\[?\s*(20\d{2}-\d{1,2}-\d{1,2})\s+(\d{1,2}:\d{2})\s*\]?\s*([^：:]+)[：:]\s*(.+)$/);
+      const match = line.match(/^\[?\s*(20\d{2}-\d{1,2}-\d{1,2})\s+(\d{1,2}:\d{2})(?:\s*[-~至]\s*(\d{1,2}:\d{2}))?\s*\]?\s*([^：:]+)[：:]\s*(.+)$/);
       if (!match) return false;
       const date = extractImportDate(match[1]) || fallbackDate;
-      const assignee = detectAssignablePerson(match[3], "") || detectPersonId(match[3], "");
+      const assignee = detectAssignablePerson(match[4], "") || detectPersonId(match[4], "");
       if (!assignee) return false;
-      const detail = match[4].split(/[｜|]/)[0].replace(/（.*?）/g, "").trim();
+      const detail = match[5].split(/[｜|]/)[0].replace(/（.*?）/g, "").trim();
       createTaskForAssignee({
         title: detail || "导入事项",
         assignee,
         date,
         time: match[2],
-        location: inferLocation(match[4]),
-        prep: suggestServicePrep(match[4], inferLocation(match[4]))
+        endTime: match[3] || "",
+        location: inferLocation(match[5]),
+        prep: suggestServicePrep(match[5], inferLocation(match[5]))
       });
       return true;
     }
@@ -3858,7 +3885,7 @@
       return Math.max(0, Math.min(23 * 60 + 59, total));
     }
 
-    function addLinkedSchedule({ personId, title, time, location, rideMode, companionId = "helperA", driverId = "driver", date = state.selectedDate, suppressNotice = false }) {
+    function addLinkedSchedule({ personId, title, time, endTime = "", location, rideMode, companionId = "helperA", driverId = "driver", date = state.selectedDate, suppressNotice = false }) {
       const person = memberById(personId);
       const driver = memberById(driverId);
       const personIsDriver = personId === "driver" || personId === "driverLei";
@@ -3872,6 +3899,7 @@
         date,
         location,
         time,
+        endTime,
         groupId,
         groupTitle,
         relationLabel: `${person.name}本人`,
@@ -3950,7 +3978,7 @@
       }
     }
 
-    function addLinkedScheduleBatch({ personIds, title, time, location, rideMode, companionIds = [], driverId = "driver", date = state.selectedDate, reassignedFrom = "" }) {
+    function addLinkedScheduleBatch({ personIds, title, time, endTime = "", location, rideMode, companionIds = [], driverId = "driver", date = state.selectedDate, reassignedFrom = "" }) {
       const people = personIds.map(memberById);
       const selectedCompanions = companionIds.filter(id => id && id !== "none");
       const groupId = uid();
@@ -3968,6 +3996,7 @@
           date,
           location,
           time,
+          endTime,
           groupId,
           groupTitle,
           relationLabel: `${person.name}本人`,
@@ -4082,7 +4111,7 @@
       const first = sorted[0];
       const relations = sorted.map(task => {
         const label = task.relationLabel || memberById(task.assignee).name;
-        return `<span class="relation-chip">${label} · ${task.time}</span>`;
+        return `<span class="relation-chip">${label} · ${taskTimeText(task)}</span>`;
       }).join("");
       group.innerHTML = `
         <div class="task-group-head">
@@ -4137,7 +4166,7 @@
               <h3 class="task-title">${task.title}</h3>
               <div class="task-meta">
                 ${dateBadge}
-                <span class="badge">${task.time}</span>
+                <span class="badge">${taskTimeText(task)}</span>
                 <span class="badge">${assignee.name}</span>
                 ${locationBadge}
                 ${followUpBadge}
@@ -4189,7 +4218,7 @@
       content.innerHTML = `
         <div class="worker-now">
           <span class="worker-mini-label">现在要做</span>
-          <h3>${current.time} · ${current.title}</h3>
+          <h3>${taskTimeText(current)} · ${current.title}</h3>
           <div class="task-meta">
             <span class="badge">${locationById(current.location)}</span>
             <span class="badge">${statusText(current.status)}</span>
@@ -4202,7 +4231,7 @@
         </div>
         <div class="worker-next">
           <span class="worker-mini-label">下一个</span>
-          <strong>${next ? `${next.time} · ${next.title}` : `${dayLabel}后面暂无事项`}</strong>
+          <strong>${next ? `${taskTimeText(next)} · ${next.title}` : `${dayLabel}后面暂无事项`}</strong>
           ${next ? `<span class="dashboard-note">${locationById(next.location)} · ${next.prep || suggestPrep(next.title, next.location)}</span>` : ""}
         </div>
       `;
@@ -4236,7 +4265,7 @@
           const item = document.createElement("div");
           item.className = "visual-task";
           item.innerHTML = `
-            <strong>${isWeekRange() ? `${dateShortText(task.date || todayISO())} · ` : ""}${task.time} · ${task.title}</strong>
+            <strong>${isWeekRange() ? `${dateShortText(task.date || todayISO())} · ` : ""}${taskTimeText(task)} · ${task.title}</strong>
             <span>${task.location === "none" ? locationById(task.location) : locationById(task.location)} · ${statusText(task.status)}</span>
             ${shouldShowFollowUp(task) ? `<span>${appLanguage === "en" ? "Follow-up" : "跟进人"}：${followUpText(task.followUp || inferFollowUp(task))}</span>` : ""}
             <span>${appLanguage === "en" ? "Prep" : "准备"}：${task.prep || suggestPrep(task.title, task.location)}</span>
@@ -4440,7 +4469,7 @@
             const item = document.createElement("div");
             item.className = "notice sheet-task-item";
             item.innerHTML = `
-              <span class="sheet-task-time">${task.time || "--:--"}</span>
+              <span class="sheet-task-time">${taskTimeText(task)}</span>
               <span class="sheet-task-title">${task.title}（${statusText(task.status)}）</span>
             `;
             group.appendChild(item);
@@ -4469,7 +4498,7 @@
         tasks.forEach(task => {
           const item = document.createElement("div");
           item.className = "notice";
-          item.textContent = `${task.time}  ${memberById(task.assignee).name}：${task.title}（${statusText(task.status)}）`;
+          item.textContent = `${taskTimeText(task)}  ${memberById(task.assignee).name}：${task.title}（${statusText(task.status)}）`;
           content.appendChild(item);
         });
       }
@@ -4564,7 +4593,7 @@
 
       const focusRows = [
         ...upcoming.map(task => ({
-          title: `${task.time} 马上开始：${task.title}`,
+          title: `${taskTimeText(task)} 马上开始：${task.title}`,
           value: memberById(task.assignee).name
         })),
         ...busyPeople.map(item => ({
@@ -4587,6 +4616,12 @@
 
       document.querySelector(".dashboard-card.alert").onclick = () => {
         openTaskSummary(`${selectedDateLabel()}全部事项`, tasks, { groupByPerson: true });
+      };
+      document.getElementById("openTasksCard").onclick = () => {
+        openTaskSummary(`${selectedDateLabel()}未完成事项`, openTasks, { groupByPerson: true });
+      };
+      document.getElementById("upcomingCard").onclick = () => {
+        openTaskSummary("马上开始", upcoming, { groupByPerson: true });
       };
       if (feedbackCard && canSeeMomFeedback()) {
         feedbackCard.onclick = () => openFeedbackSummary(unread.length ? unread : recentFeedbacks());
@@ -4862,10 +4897,12 @@
       const executors = selectedValues(document.getElementById("scheduleCompanion"));
       const companionIds = executors.length ? executors : ["none"];
       const date = document.getElementById("scheduleDate").value || state.selectedDate;
+      const endTime = document.getElementById("scheduleNoEndTime").checked ? "" : document.getElementById("scheduleEndTime").value;
       addLinkedScheduleBatch({
         personIds,
         title,
         time: document.getElementById("scheduleTime").value || "09:00",
+        endTime,
         location: document.getElementById("scheduleLocation").value,
         rideMode: document.getElementById("scheduleRide").value,
         companionIds,
@@ -4873,8 +4910,18 @@
         date
       });
       document.getElementById("scheduleTitle").value = "";
+      document.getElementById("scheduleEndTime").value = "";
+      document.getElementById("scheduleNoEndTime").checked = true;
       save();
       render();
+    });
+
+    document.getElementById("scheduleEndTime").addEventListener("input", event => {
+      if (event.target.value) document.getElementById("scheduleNoEndTime").checked = false;
+    });
+
+    document.getElementById("scheduleNoEndTime").addEventListener("change", event => {
+      if (event.target.checked) document.getElementById("scheduleEndTime").value = "";
     });
 
     document.getElementById("generateExportTextBtn").addEventListener("click", exportScheduleText);
