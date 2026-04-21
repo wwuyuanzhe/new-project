@@ -2396,6 +2396,7 @@
           </div>
           <div class="dashboard-actions">
             <button class="action" type="button" id="generateKidsTodayTextBtn">今天小朋友</button>
+            <button class="action" type="button" id="generateKidsTomorrowTextBtn">明天小朋友</button>
           </div>
           <div class="priority-focus" id="overviewPriorityFocus" hidden>
             <h3>重点</h3>
@@ -3825,15 +3826,8 @@
       return suggestPrep(text, location);
     }
 
-    function exportScheduleText() {
-      const memberIds = selectedValues(document.getElementById("exportMembers")).filter(Boolean);
-      const start = document.getElementById("exportStartDate").value || state.selectedDate;
-      const end = document.getElementById("exportEndDate").value || start;
-      const output = document.getElementById("exportText");
-      if (!memberIds.length) {
-        output.value = "请先选择要导出的成员。";
-        return;
-      }
+    function scheduleTextForMembers(memberIds, start, end) {
+      if (!memberIds.length) return "请先选择要导出的成员。";
       const allowed = new Set(visibleMemberIdsForCurrentUser());
       const selected = memberIds.filter(id => isManagerUser() || allowed.has(id));
       const dateList = datesBetween(start, end);
@@ -3864,18 +3858,29 @@
         lines.push("");
       });
 
-      output.value = tasks.length
+      return tasks.length
         ? lines.join("\n").trim()
         : `所选成员在 ${fullDateText(dateList[0])}${dateList.length > 1 ? ` 至 ${fullDateText(dateList[dateList.length - 1])}` : ""} 暂无事项。`;
     }
 
-    function generateKidsTodayText() {
+    function exportScheduleText() {
+      const memberIds = selectedValues(document.getElementById("exportMembers")).filter(Boolean);
+      const start = document.getElementById("exportStartDate").value || state.selectedDate;
+      const end = document.getElementById("exportEndDate").value || start;
+      document.getElementById("exportText").value = scheduleTextForMembers(memberIds, start, end);
+    }
+
+    function generateKidsScheduleText(date, label) {
       const kids = ["daughter1", "daughter2", "son"];
-      setSelectedValues(document.getElementById("exportMembers"), kids);
-      document.getElementById("exportStartDate").value = state.selectedDate;
-      document.getElementById("exportEndDate").value = state.selectedDate;
-      exportScheduleText();
-      openGeneratedTextSheet(`${dateShortText(state.selectedDate)} 今天小朋友`, document.getElementById("exportText").value);
+      openGeneratedTextSheet(`${dateShortText(date)} ${label}`, scheduleTextForMembers(kids, date, date));
+    }
+
+    function generateKidsTodayText() {
+      generateKidsScheduleText(state.selectedDate, "今天小朋友");
+    }
+
+    function generateKidsTomorrowText() {
+      generateKidsScheduleText(addDays(state.selectedDate, 1), "明天小朋友");
     }
 
     function openGeneratedTextSheet(title, text) {
@@ -5563,6 +5568,8 @@
     document.getElementById("generateExportTextBtn").addEventListener("click", exportScheduleText);
 
     document.getElementById("generateKidsTodayTextBtn").addEventListener("click", generateKidsTodayText);
+
+    document.getElementById("generateKidsTomorrowTextBtn").addEventListener("click", generateKidsTomorrowText);
 
     document.getElementById("copyExportTextBtn").addEventListener("click", async () => {
       const textarea = document.getElementById("exportText");
