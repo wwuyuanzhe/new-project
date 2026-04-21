@@ -1121,6 +1121,84 @@
       overflow-wrap: anywhere;
     }
 
+    .daypart-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .daypart-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 104px;
+      padding: 13px;
+      border-radius: 8px;
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: var(--glow);
+      display: grid;
+      align-content: space-between;
+      gap: 9px;
+      cursor: pointer;
+    }
+
+    .daypart-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.12), transparent 55%);
+    }
+
+    .daypart-card.afternoon::before {
+      background: linear-gradient(135deg, rgba(255, 149, 0, 0.14), transparent 55%);
+    }
+
+    .daypart-card.evening::before {
+      background: linear-gradient(135deg, rgba(88, 86, 214, 0.14), transparent 55%);
+    }
+
+    .daypart-card:hover {
+      border-color: rgba(0, 122, 255, 0.24);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .daypart-top,
+    .daypart-body {
+      position: relative;
+      z-index: 1;
+    }
+
+    .daypart-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .daypart-label {
+      font-size: 13px;
+      font-weight: 900;
+      color: var(--ink);
+    }
+
+    .daypart-body {
+      display: grid;
+      gap: 4px;
+    }
+
+    .daypart-body strong {
+      font-size: 17px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .daypart-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
     .dashboard-actions {
       display: flex;
       gap: 8px;
@@ -1914,6 +1992,24 @@
         white-space: normal;
       }
 
+      .daypart-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .daypart-card {
+        min-height: 78px;
+        padding: 10px;
+      }
+
+      .daypart-body strong {
+        font-size: 14px;
+      }
+
+      .daypart-note {
+        display: none;
+      }
+
       .dashboard-actions {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2201,13 +2297,11 @@
               <span class="dashboard-note" id="upcomingText">暂无即将开始事项</span>
             </div>
           </div>
-          <div class="dashboard-list" id="momFocusList"></div>
         </div>
         <div class="panel-head">
           <h2>总览</h2>
         </div>
         <div class="summary">
-          <div class="person-progress" id="progressList"></div>
           <div class="dashboard-list" id="daypartList"></div>
         </div>
         <div class="panel-head">
@@ -3641,17 +3735,37 @@
           const personTasks = dayTasks.filter(task => task.assignee === memberId).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
           if (!personTasks.length) return;
           lines.push(`${memberById(memberId).name}`);
-          const renderedGroups = new Set();
+          const mergedRows = new Map();
           personTasks.forEach(task => {
-            const location = task.location && task.location !== "none" ? `｜地点：${locationById(task.location)}` : "";
-            const follow = !task.groupId && shouldShowFollowUp(task) && task.followUp && task.followUp !== "none" ? `｜陪同/执行：${followUpText(task.followUp)}` : "";
-            const relation = task.groupId ? relationSummaryBadgesPlain(task) : "";
-            const line = `[${date} ${taskTimeText(task)}] ${displayTaskTitle(task)}${location}${follow}${relation ? `｜${relation}` : ""}`;
-            const key = task.groupId || line;
-            if (renderedGroups.has(key)) return;
-            renderedGroups.add(key);
-            lines.push(line);
+            const title = displayTaskTitle(task);
+            const timeText = taskTimeText(task);
+            const locationText = task.location && task.location !== "none" ? locationById(task.location) : "";
+            const key = `${date}|${timeText}|${title}|${locationText}`;
+            if (!mergedRows.has(key)) {
+              mergedRows.set(key, {
+                date,
+                timeText,
+                title,
+                locationText,
+                rides: new Set(),
+                executors: new Set()
+              });
+            }
+            const row = mergedRows.get(key);
+            collectRelationNames(task).rides.forEach(name => row.rides.add(name));
+            collectRelationNames(task).executors.forEach(name => row.executors.add(name));
+            if (!task.groupId && shouldShowFollowUp(task) && task.followUp && task.followUp !== "none") {
+              row.executors.add(followUpText(task.followUp));
+            }
           });
+          [...mergedRows.values()]
+            .sort((a, b) => a.timeText.localeCompare(b.timeText) || a.title.localeCompare(b.title))
+            .forEach(row => {
+              const location = row.locationText ? `｜地点：${row.locationText}` : "";
+              const ride = row.rides.size ? `｜接送：${[...row.rides].join("、")}` : "";
+              const execute = row.executors.size ? `｜陪同/执行：${[...row.executors].join("、")}` : "";
+              lines.push(`[${row.date} ${row.timeText}] ${row.title}${location}${ride}${execute}`);
+            });
           lines.push("");
         });
       });
@@ -3661,20 +3775,37 @@
         : `所选成员在 ${fullDateText(dateList[0])}${dateList.length > 1 ? ` 至 ${fullDateText(dateList[dateList.length - 1])}` : ""} 暂无事项。`;
     }
 
+    function relationMatchesTask(task, item) {
+      if (task.groupId && item.groupId === task.groupId) return true;
+      return (item.date || todayISO()) === (task.date || todayISO())
+        && taskTimeText(item) === taskTimeText(task)
+        && displayTaskTitle(item) === displayTaskTitle(task);
+    }
+
+    function collectRelationNames(task) {
+      const related = state.tasks.filter(item => relationMatchesTask(task, item));
+      const rides = [];
+      const executors = [];
+      related.forEach(item => {
+        const label = item.relationLabel || "";
+        const text = `${label} ${item.title || ""}`;
+        const name = memberById(item.assignee).name;
+        const isRide = !/执行|陪同|跟进|execute|follow/i.test(text)
+          && (/接送|送|接|ride/i.test(text) || ["driver", "driverLei"].includes(item.assignee));
+        const isExecutor = /执行|陪同|跟进|execute|follow/i.test(text)
+          || ["helperA", "helperB", "helperC", "kk", "chef"].includes(item.assignee);
+        if (isRide) rides.push(name);
+        if (isExecutor) executors.push(name);
+      });
+      return {
+        rides: [...new Set(rides)],
+        executors: [...new Set(executors)]
+      };
+    }
+
     function relationSummaryBadgesPlain(task) {
       if (!task.groupId) return "";
-      const groupTasks = state.tasks.filter(item => item.groupId === task.groupId);
-      const rides = groupTasks
-        .filter(item => {
-          const label = item.relationLabel || "";
-          const text = `${label} ${item.title || ""}`;
-          if (/执行|陪同|跟进|execute|follow/i.test(text)) return false;
-          return /接送|送|接|ride/i.test(text) || ["driver", "driverLei"].includes(item.assignee);
-        })
-        .map(item => memberById(item.assignee).name);
-      const executors = groupTasks
-        .filter(item => /执行|陪同|跟进|execute|follow/i.test(`${item.relationLabel || ""} ${item.title || ""}`) || ["helperA", "helperB", "helperC", "kk", "chef"].includes(item.assignee))
-        .map(item => memberById(item.assignee).name);
+      const { rides, executors } = collectRelationNames(task);
       const unique = list => [...new Set(list)].join("、");
       return [
         rides.length ? `接送：${unique(rides)}` : "",
@@ -4504,49 +4635,63 @@
     function renderSummary() {
       const dateTasks = state.tasks.filter(task => dateInRange(task.date || todayISO()));
       const progress = document.getElementById("progressList");
-      progress.innerHTML = "";
-      members
-        .filter(member => member.id !== "all")
-        .slice()
-        .sort((a, b) => personSortIndex(a.id) - personSortIndex(b.id))
-        .forEach(member => {
-        const ownTasks = dateTasks.filter(task => task.assignee === member.id);
-        const done = ownTasks.filter(task => task.status === "done").length;
-        const open = ownTasks.length - done;
-        const percent = ownTasks.length ? Math.round((done / ownTasks.length) * 100) : 0;
-        const row = document.createElement("div");
-        const stateClass = ownTasks.length === 0 ? "idle" : open === 0 ? "good" : open >= 3 ? "busy" : "";
-        row.className = `progress-row clickable ${stateClass}`;
-        row.innerHTML = `
-          <strong>${member.name}</strong>
-          <span class="progress-count">${done}/${ownTasks.length}</span>
-          <span class="bar"><span class="fill" style="width:${percent}%"></span></span>
-          <span class="progress-note">${ownTasks.length ? `${open} 未完成 · ${percent}%` : "今天暂无事项"}</span>
-        `;
-        row.addEventListener("click", () => {
-          openTaskSummary(`${member.name}未完成事项`, ownTasks.filter(task => task.status !== "done"));
+      if (progress) {
+        progress.innerHTML = "";
+        members
+          .filter(member => member.id !== "all")
+          .slice()
+          .sort((a, b) => personSortIndex(a.id) - personSortIndex(b.id))
+          .forEach(member => {
+          const ownTasks = dateTasks.filter(task => task.assignee === member.id);
+          const done = ownTasks.filter(task => task.status === "done").length;
+          const open = ownTasks.length - done;
+          const percent = ownTasks.length ? Math.round((done / ownTasks.length) * 100) : 0;
+          const row = document.createElement("div");
+          const stateClass = ownTasks.length === 0 ? "idle" : open === 0 ? "good" : open >= 3 ? "busy" : "";
+          row.className = `progress-row clickable ${stateClass}`;
+          row.innerHTML = `
+            <strong>${member.name}</strong>
+            <span class="progress-count">${done}/${ownTasks.length}</span>
+            <span class="bar"><span class="fill" style="width:${percent}%"></span></span>
+            <span class="progress-note">${ownTasks.length ? `${open} 未完成 · ${percent}%` : "今天暂无事项"}</span>
+          `;
+          row.addEventListener("click", () => {
+            openTaskSummary(`${member.name}未完成事项`, ownTasks.filter(task => task.status !== "done"));
+          });
+          progress.appendChild(row);
         });
-        progress.appendChild(row);
-      });
+      }
       renderDaypartList(dateTasks);
     }
 
     function renderDaypartList(tasks) {
       const list = document.getElementById("daypartList");
       list.innerHTML = "";
+      list.classList.add("daypart-list");
       const parts = [
-        { label: "上午", from: 0, to: 12 * 60 },
-        { label: "下午", from: 12 * 60, to: 18 * 60 },
-        { label: "晚上", from: 18 * 60, to: 24 * 60 }
+        { key: "morning", label: "上午", from: 0, to: 12 * 60 },
+        { key: "afternoon", label: "下午", from: 12 * 60, to: 18 * 60 },
+        { key: "evening", label: "晚上", from: 18 * 60, to: 24 * 60 }
       ];
       parts.forEach(part => {
         const partTasks = tasks.filter(task => {
           const minutes = timeToMinutes(task.time || "09:00");
           return minutes >= part.from && minutes < part.to;
         }).sort((a, b) => a.time.localeCompare(b.time));
+        const open = partTasks.filter(task => task.status !== "done").length;
+        const first = partTasks[0];
         const row = document.createElement("div");
-        row.className = "dashboard-row clickable";
-        row.innerHTML = `<strong>${part.label}</strong><span class="badge">${partTasks.length} 项</span>`;
+        row.className = `daypart-card ${part.key}`;
+        row.innerHTML = `
+          <div class="daypart-top">
+            <span class="daypart-label">${part.label}</span>
+            <span class="badge">${partTasks.length} 项</span>
+          </div>
+          <div class="daypart-body">
+            <strong>${partTasks.length ? `${open} 项待完成` : "暂无安排"}</strong>
+            <span class="daypart-note">${first ? `${taskTimeText(first)} ${memberById(first.assignee).name}：${displayTaskTitle(first)}` : "这一段时间比较轻松"}</span>
+          </div>
+        `;
         row.addEventListener("click", () => openTaskSummary(`${part.label}事项`, partTasks, { groupByPerson: true }));
         list.appendChild(row);
       });
@@ -4693,42 +4838,6 @@
       document.getElementById("upcomingText").textContent = upcoming.length
         ? `${upcoming[0].time} ${memberById(upcoming[0].assignee).name}：${upcoming[0].title}`
         : `${selectedDateLabel()}暂无即将开始事项`;
-
-      const focus = document.getElementById("momFocusList");
-      focus.innerHTML = "";
-      const busyPeople = members
-        .filter(member => member.id !== "all")
-        .map(member => ({
-          member,
-          total: tasks.filter(task => task.assignee === member.id).length,
-          open: openTasks.filter(task => task.assignee === member.id).length
-        }))
-        .filter(item => item.total > 0)
-        .sort((a, b) => b.open - a.open || b.total - a.total)
-        .slice(0, 4);
-
-      const focusRows = [
-        ...upcoming.map(task => ({
-          title: `${taskTimeText(task)} 马上开始：${task.title}`,
-          value: memberById(task.assignee).name
-        })),
-        ...busyPeople.map(item => ({
-          title: `${item.member.name} ${selectedDateLabel()}有 ${item.total} 项`,
-          value: `${item.open} 未完成`
-        }))
-      ].slice(0, 6);
-
-      if (!focusRows.length) {
-        focus.innerHTML = `<div class="empty">${selectedDateLabel()}目前很清爽，没有需要妈妈马上处理的提醒。</div>`;
-        return;
-      }
-
-      focusRows.forEach(row => {
-        const item = document.createElement("div");
-        item.className = "dashboard-row";
-        item.innerHTML = `<strong>${row.title}</strong><span class="badge">${row.value}</span>`;
-        focus.appendChild(item);
-      });
 
       document.querySelector(".dashboard-card.alert").onclick = () => {
         openTaskSummary(`${selectedDateLabel()}全部事项`, tasks, { groupByPerson: true });
