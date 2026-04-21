@@ -715,6 +715,36 @@
       word-break: break-word;
     }
 
+    .butler-request-list {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .butler-request-card {
+      display: grid;
+      gap: 9px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(255, 251, 235, 0.94);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      box-shadow: var(--glow);
+    }
+
+    .butler-request-card strong {
+      font-size: 14px;
+    }
+
+    .raw-request-text {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #7c4a03;
+      font-size: 13px;
+      line-height: 1.58;
+      font-family: inherit;
+    }
+
     .visual-board {
       padding: 14px;
       display: grid;
@@ -2174,6 +2204,13 @@
           <div class="worker-today" id="workerTodayContent"></div>
         </section>
 
+        <section class="panel" id="butlerRequestPanel" hidden>
+          <div class="panel-head">
+            <h2>待确认原文</h2>
+          </div>
+          <div class="butler-request-list" id="butlerRequestList"></div>
+        </section>
+
         <section class="panel" id="quickPanel">
           <div class="mode-tabs" id="actionTabs">
             <button class="mode-tab active" type="button" data-action-mode="natural">Ai输入</button>
@@ -2217,11 +2254,11 @@
               </div>
               <div class="field">
                 <label for="scheduleLocation">地点</label>
-                <select id="scheduleLocation"></select>
+                <select id="scheduleLocation" multiple></select>
               </div>
               <div class="field">
                 <label for="scheduleDriver">接送人</label>
-                <select id="scheduleDriver">
+                <select id="scheduleDriver" multiple>
                   <option value="none">无</option>
                   <option value="driver">陈管家</option>
                   <option value="driverLei">司机阿磊</option>
@@ -2490,12 +2527,12 @@
           </div>
           <div class="field">
             <label for="reassignLocation">地点</label>
-            <select id="reassignLocation"></select>
+            <select id="reassignLocation" multiple></select>
           </div>
           <div class="reassign-grid">
             <div class="field">
               <label for="reassignDriver">接送人</label>
-              <select id="reassignDriver">
+              <select id="reassignDriver" multiple>
                 <option value="none">无</option>
                 <option value="driver">陈管家</option>
                 <option value="driverLei">司机阿磊</option>
@@ -2944,11 +2981,33 @@
 
     function locationById(id) {
       if (!id || id === "none") return appLanguage === "en" ? "No location" : "不指定地点";
+      if (String(id).includes(",")) {
+        return String(id)
+          .split(",")
+          .filter(Boolean)
+          .map(item => locationById(item))
+          .filter(text => !/不指定地点|No location/.test(text))
+          .join("、") || (appLanguage === "en" ? "No location" : "不指定地点");
+      }
       for (const section of locations) {
         const room = section.rooms.find(item => item.id === id);
         if (room) return `${section.group} · ${room.name}`;
       }
       return appLanguage === "en" ? "No location" : "不指定地点";
+    }
+
+    function normalizeLocationIds(ids) {
+      const selected = (Array.isArray(ids) ? ids : [ids])
+        .filter(Boolean)
+        .filter(id => id !== "none");
+      return selected.length ? selected.join(",") : "none";
+    }
+
+    function normalizeDriverIds(ids) {
+      const selected = (Array.isArray(ids) ? ids : [ids])
+        .filter(Boolean)
+        .filter(id => id !== "none");
+      return selected.length ? [...new Set(selected)] : [];
     }
 
     function suggestPrep(title, location) {
@@ -3162,6 +3221,15 @@
       return Array.from(select.selectedOptions).map(option => option.value);
     }
 
+    function escapeHtml(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
     function setSelectedValues(select, values) {
       const wanted = new Set(values);
       Array.from(select.options).forEach(option => {
@@ -3234,7 +3302,7 @@
     }
 
     function currentSpeakerId() {
-      if (state.selectedMember === "all") return "all";
+      if (state.selectedMember === "all") return state.currentUser || "mom";
       return state.selectedMember;
     }
 
@@ -3254,6 +3322,10 @@
       document.getElementById("textExchangePanel").hidden = state.actionMode !== "text";
     }
 
+    function firstLocationValue(value) {
+      return String(value || "none").split(",").filter(Boolean)[0] || "none";
+    }
+
     function isSimpleWorker(memberId) {
       return ["helperA", "helperB", "helperC", "chef", "driverLei"].includes(memberId);
     }
@@ -3262,6 +3334,7 @@
       const simple = isSimpleWorker(state.selectedMember);
       document.querySelector(".layout").classList.toggle("simple-worker-mode", simple);
       document.getElementById("workerTodayPanel").hidden = !simple;
+      document.getElementById("butlerRequestPanel").hidden = state.selectedMember !== "driver";
       document.getElementById("quickPanel").style.display = simple || !canAddContent() ? "none" : "";
       document.getElementById("routinePanel").style.display = simple || !canAddContent() ? "none" : "";
       document.querySelector(".right").style.display = simple ? "none" : "";
@@ -3472,7 +3545,8 @@
     }
 
     function forwardRequestToButler(text, requesterId, reason = "小助手没有足够把握") {
-      const clean = text.replace(/\s+/g, " ").trim();
+      const raw = text.trim();
+      const clean = raw.replace(/\s+/g, " ").trim();
       if (!clean) return true;
       const requesterName = requestSourceText(requesterId);
       createTask({
@@ -3482,11 +3556,11 @@
         location: "none",
         time: minutesToTime(nowMinutes()),
         prep: "先阅读原始请求，确认日期、人员、执行人和接送安排后，再手动添加日程。",
-        requestText: clean,
+        requestText: raw,
         requestFrom: requesterId,
         notify: false
       });
-      pushNotice(`待陈管家确认：${requesterName} 提出「${clean}」。${reason}，请陈管家先确认后再分配。`, ["driver"]);
+      pushNotice(`待陈管家确认：${requesterName} 提出了一段原始行程。${reason}，请陈管家打开“待确认原文”查看完整内容。`, ["driver"]);
       state.notices.unshift({
         id: uid(),
         text: `这条内容已完整转给陈管家确认，没有自动添加到其他人的日程：${clean}`,
@@ -3494,6 +3568,13 @@
         targetIds: [requesterId]
       });
       return true;
+    }
+
+    function shouldForwardRawToButler(text) {
+      const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const timeRanges = text.match(/\d{1,2}\s*[:：]\s*\d{2}\s*[-~至]\s*\d{1,2}\s*[:：]\s*\d{2}/g) || [];
+      const englishWords = text.match(/[A-Za-z]{3,}/g) || [];
+      return lines.length >= 4 || timeRanges.length >= 2 || (lines.length >= 2 && englishWords.length >= 2);
     }
 
     async function parseNaturalRequestWithGPT(text, requesterId) {
@@ -4455,16 +4536,17 @@
       }
     }
 
-    function addLinkedScheduleBatch({ personIds, title, time, endTime = "", location, rideMode, companionIds = [], driverId = "driver", date = state.selectedDate, reassignedFrom = "", groupId: groupIdOverride = "", urgent = false, notify = true }) {
+    function addLinkedScheduleBatch({ personIds, title, time, endTime = "", location, rideMode, companionIds = [], driverId = "driver", driverIds = [], date = state.selectedDate, reassignedFrom = "", groupId: groupIdOverride = "", urgent = false, notify = true }) {
       const people = personIds.map(memberById);
       const selectedCompanions = companionIds.filter(id => id && id !== "none");
+      const selectedDrivers = normalizeDriverIds(driverIds.length ? driverIds : [driverId]);
       const groupId = groupIdOverride || uid();
       const peopleText = people.map(person => person.name).join("、");
       const groupTitle = `${peopleText} ${title}`;
       const start = timeToMinutes(time);
       const companionText = selectedCompanions.map(id => memberById(id).name).join("、");
-      const effectiveRideMode = driverId && driverId !== "none" ? (rideMode || "yes") : "no";
-      const followUp = selectedCompanions.length ? selectedCompanions.join(",") : (effectiveRideMode !== "no" ? driverId : "none");
+      const effectiveRideMode = selectedDrivers.length ? (rideMode || "yes") : "no";
+      const followUp = selectedCompanions.length ? selectedCompanions.join(",") : (effectiveRideMode !== "no" ? selectedDrivers.join(",") : "none");
 
       personIds.forEach(personId => {
         const person = memberById(personId);
@@ -4487,6 +4569,7 @@
       });
 
       if (effectiveRideMode !== "no") {
+        selectedDrivers.forEach(driverId => {
         const driver = memberById(driverId);
         const rideTitle = effectiveRideMode === "pickup"
           ? `接${peopleText}${title}结束`
@@ -4506,6 +4589,7 @@
           urgent,
           notify,
           prep: "提前确认人数、路线、车钥匙、停车点和随身物品；接送完成后有变化再反馈。"
+        });
         });
       }
 
@@ -4527,7 +4611,7 @@
       });
 
       if (!reassignedFrom) {
-        pushNotice(`已保存「${groupTitle}」：每个人 1 条主任务，${effectiveRideMode !== "no" ? "接送已合并，" : ""}${companionText ? `跟进人是 ${companionText}。` : "未指定跟进人。"}`, [effectiveRideMode !== "no" ? driverId : "", ...selectedCompanions, ...personIds]);
+        pushNotice(`已保存「${groupTitle}」：每个人 1 条主任务，${effectiveRideMode !== "no" ? "接送已合并，" : ""}${companionText ? `跟进人是 ${companionText}。` : "未指定跟进人。"}`, [...selectedDrivers, ...selectedCompanions, ...personIds]);
       }
     }
 
@@ -4655,7 +4739,7 @@
         const canOperate = canOperateTask(task);
         const canManage = canManageTask(task);
         const requestDetail = task.requestText
-          ? `<div class="request-line">原始请求：${memberById(task.requestFrom).name || "收到新的请求"}：${task.requestText}</div>`
+          ? `<div class="request-line">原始请求：${escapeHtml(memberById(task.requestFrom).name || "收到新的请求")}：${escapeHtml(task.requestText)}</div>`
           : "";
         const card = document.createElement("article");
         card.className = `task ${task.urgent ? "urgent" : ""} ${task.status} ${task.assignedAt ? "assigned" : ""}`;
@@ -4737,6 +4821,55 @@
       });
     }
 
+    function renderButlerRequests() {
+      const panel = document.getElementById("butlerRequestPanel");
+      const list = document.getElementById("butlerRequestList");
+      if (!panel || !list) return;
+      const show = state.selectedMember === "driver";
+      panel.hidden = !show;
+      if (!show) return;
+      const requests = state.tasks
+        .filter(task => task.assignee === "driver" && task.requestText)
+        .sort((a, b) => `${b.date || todayISO()} ${b.time || "09:00"}`.localeCompare(`${a.date || todayISO()} ${a.time || "09:00"}`));
+      list.innerHTML = "";
+      if (!requests.length) {
+        list.innerHTML = `<div class="empty">AI 识别不准的原始内容会完整出现在这里，方便陈管家再手动添加日程。</div>`;
+        return;
+      }
+      requests.slice(0, 8).forEach(task => {
+        const card = document.createElement("div");
+        card.className = "butler-request-card";
+        card.innerHTML = `
+          <strong>${dateShortText(task.date || todayISO())} ${task.time || ""} · ${escapeHtml(memberById(task.requestFrom).name || "收到新的请求")}</strong>
+          <pre class="raw-request-text">${escapeHtml(task.requestText)}</pre>
+          <div class="task-actions">
+            <button class="action" type="button" data-open-schedule="${task.id}">去写日程</button>
+            <button class="action" type="button" data-done-request="${task.id}">已处理</button>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+      list.querySelectorAll("[data-open-schedule]").forEach(button => {
+        button.addEventListener("click", () => {
+          const task = state.tasks.find(item => item.id === button.dataset.openSchedule);
+          state.actionMode = "schedule";
+          if (task) {
+            document.getElementById("scheduleTitle").value = task.requestText.split(/\r?\n/).map(line => line.trim()).filter(Boolean)[0] || task.requestText;
+          }
+          renderActionTabs();
+          document.getElementById("quickPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+      list.querySelectorAll("[data-done-request]").forEach(button => {
+        button.addEventListener("click", () => {
+          const task = state.tasks.find(item => item.id === button.dataset.doneRequest);
+          if (task) task.status = "done";
+          save();
+          render();
+        });
+      });
+    }
+
     function renderVisualTasks(container, tasks) {
       container.innerHTML = "";
       const board = document.createElement("div");
@@ -4792,13 +4925,13 @@
       const groupTasks = task.groupId ? state.tasks.filter(item => item.groupId === task.groupId) : [];
       const people = groupTasks.filter(item => /本人/.test(item.relationLabel || "")).map(item => item.assignee);
       const executors = groupTasks.filter(item => /执行|陪同|跟进/.test(item.relationLabel || "")).map(item => item.assignee);
-      const rideTask = groupTasks.find(item => /接送/.test(item.relationLabel || ""));
+      const ridePeople = groupTasks.filter(item => /接送/.test(item.relationLabel || "")).map(item => item.assignee);
       document.getElementById("reassignTitle").value = task.title || "";
       document.getElementById("reassignDate").value = task.date || state.selectedDate;
       document.getElementById("reassignTime").value = task.time || "09:00";
       document.getElementById("reassignEndTime").value = task.endTime || "";
-      document.getElementById("reassignLocation").value = task.location || "none";
-      document.getElementById("reassignDriver").value = rideTask ? rideTask.assignee : "none";
+      setSelectedValues(document.getElementById("reassignLocation"), String(task.location || "none").split(",").filter(Boolean));
+      setSelectedValues(document.getElementById("reassignDriver"), ridePeople);
       setSelectedValues(document.getElementById("reassignPeople"), people.length ? people : [task.assignee]);
       setSelectedValues(document.getElementById("reassignExecutors"), executors);
       document.getElementById("reassignSheet").hidden = false;
@@ -4812,14 +4945,14 @@
       const groupTasks = task.groupId ? state.tasks.filter(item => item.groupId === task.groupId) : [];
       const people = groupTasks.filter(item => /本人/.test(item.relationLabel || "")).map(item => item.assignee);
       const executors = groupTasks.filter(item => /执行|陪同|跟进/.test(item.relationLabel || "")).map(item => item.assignee);
-      const rideTask = groupTasks.find(item => /接送/.test(item.relationLabel || ""));
+      const ridePeople = groupTasks.filter(item => /接送/.test(item.relationLabel || "")).map(item => item.assignee);
       const primary = primaryEventTask(task);
       document.getElementById("reassignTitle").value = eventTitleForTask(task) || displayTaskTitle(task);
       document.getElementById("reassignDate").value = primary.date || task.date || state.selectedDate;
       document.getElementById("reassignTime").value = primary.time || task.time || "09:00";
       document.getElementById("reassignEndTime").value = primary.endTime || task.endTime || "";
-      document.getElementById("reassignLocation").value = primary.location || task.location || "none";
-      document.getElementById("reassignDriver").value = rideTask ? rideTask.assignee : "none";
+      setSelectedValues(document.getElementById("reassignLocation"), String(primary.location || task.location || "none").split(",").filter(Boolean));
+      setSelectedValues(document.getElementById("reassignDriver"), ridePeople);
       setSelectedValues(document.getElementById("reassignPeople"), people.length ? people : [task.assignee]);
       setSelectedValues(document.getElementById("reassignExecutors"), executors);
       document.getElementById("reassignSheet").hidden = false;
@@ -4848,7 +4981,8 @@
       const date = document.getElementById("reassignDate").value || sourceTask.date || state.selectedDate;
       const time = document.getElementById("reassignTime").value || sourceTask.time || "09:00";
       const endTime = document.getElementById("reassignEndTime").value || "";
-      const location = document.getElementById("reassignLocation").value || sourceTask.location || "none";
+      const location = normalizeLocationIds(selectedValues(document.getElementById("reassignLocation")));
+      const selectedDrivers = normalizeDriverIds(selectedValues(document.getElementById("reassignDriver")));
       state.tasks = state.tasks.filter(task => task.reassignedFrom !== sourceTask.id);
       if (people.length) {
         addLinkedScheduleBatch({
@@ -4858,8 +4992,8 @@
           time,
           endTime,
           location,
-          rideMode: document.getElementById("reassignDriver").value === "none" ? "no" : "yes",
-          driverId: document.getElementById("reassignDriver").value,
+          rideMode: selectedDrivers.length ? "yes" : "no",
+          driverIds: selectedDrivers,
           companionIds: executors.length ? executors : ["none"],
           reassignedFrom: sourceTask.id
         });
@@ -4905,7 +5039,8 @@
       const date = document.getElementById("reassignDate").value || sourceTask.date || state.selectedDate;
       const time = document.getElementById("reassignTime").value || sourceTask.time || "09:00";
       const endTime = document.getElementById("reassignEndTime").value || "";
-      const location = document.getElementById("reassignLocation").value || sourceTask.location || "none";
+      const location = normalizeLocationIds(selectedValues(document.getElementById("reassignLocation")));
+      const selectedDrivers = normalizeDriverIds(selectedValues(document.getElementById("reassignDriver")));
       const groupId = sourceTask.groupId || uid();
       state.tasks = sourceTask.groupId
         ? state.tasks.filter(task => task.groupId !== sourceTask.groupId)
@@ -4917,15 +5052,14 @@
         time,
         endTime,
         location,
-        rideMode: document.getElementById("reassignDriver").value === "none" ? "no" : "yes",
-        driverId: document.getElementById("reassignDriver").value,
+        rideMode: selectedDrivers.length ? "yes" : "no",
+        driverIds: selectedDrivers,
         companionIds: executors.length ? executors : ["none"],
         groupId,
         urgent,
         notify: false
       });
-      const selectedDriver = document.getElementById("reassignDriver").value;
-      const newTargets = [...new Set([...oldTargets, ...people, ...executors, selectedDriver === "none" ? "" : selectedDriver].filter(Boolean))];
+      const newTargets = [...new Set([...oldTargets, ...people, ...executors, ...selectedDrivers].filter(Boolean))];
       pushNotice(`事项已更新：${dateShortText(date)} ${time}「${title}」。请 ${memberNamesText(newTargets)} 查看新的安排。`, newTargets);
       closeReassignSheet();
       save();
@@ -5456,6 +5590,7 @@
         renderRoutines();
         applySimpleWorkerLayout();
         renderWorkerToday();
+        renderButlerRequests();
         renderTasks();
         renderSummary();
         renderMomDashboard();
@@ -5548,8 +5683,13 @@
       event.preventDefault();
       const text = document.getElementById("naturalText").value.trim();
       if (!text) return;
-      const usedGPT = await parseNaturalRequestWithGPT(text, currentSpeakerId());
-      if (!usedGPT) parseNaturalRequest(text, currentSpeakerId());
+      const speaker = currentSpeakerId();
+      if (shouldForwardRawToButler(text)) {
+        forwardRequestToButler(text, speaker, "这是一段多行或多时间段的原始行程");
+      } else {
+        const usedGPT = await parseNaturalRequestWithGPT(text, speaker);
+        if (!usedGPT) parseNaturalRequest(text, speaker);
+      }
       document.getElementById("naturalText").value = "";
       save();
       render();
@@ -5568,22 +5708,23 @@
       const companionIds = executors.length ? executors : ["none"];
       const date = document.getElementById("scheduleDate").value || state.selectedDate;
       const endTime = document.getElementById("scheduleNoEndTime").checked ? "" : document.getElementById("scheduleEndTime").value;
-      const selectedDriver = document.getElementById("scheduleDriver").value;
+      const selectedDrivers = normalizeDriverIds(selectedValues(document.getElementById("scheduleDriver")));
       addLinkedScheduleBatch({
         personIds,
         title,
         time: document.getElementById("scheduleTime").value || "09:00",
         endTime,
-        location: document.getElementById("scheduleLocation").value,
-        rideMode: selectedDriver === "none" ? "no" : "yes",
+        location: normalizeLocationIds(selectedValues(document.getElementById("scheduleLocation"))),
+        rideMode: selectedDrivers.length ? "yes" : "no",
         companionIds,
-        driverId: selectedDriver,
+        driverIds: selectedDrivers,
         date
       });
       document.getElementById("scheduleTitle").value = "";
       document.getElementById("scheduleEndTime").value = "";
       document.getElementById("scheduleNoEndTime").checked = true;
-      document.getElementById("scheduleDriver").value = "none";
+      setSelectedValues(document.getElementById("scheduleDriver"), []);
+      setSelectedValues(document.getElementById("scheduleLocation"), []);
       setSelectedValues(document.getElementById("schedulePerson"), []);
       setSelectedValues(document.getElementById("scheduleCompanion"), []);
       save();
