@@ -1588,6 +1588,7 @@
     }
 
     .fill {
+      display: block;
       height: 100%;
       background: linear-gradient(90deg, #7fc4ff, #007aff);
       width: 0%;
@@ -3241,11 +3242,19 @@
         .filter(task => state.selectedMember === "all" || task.assignee === state.selectedMember)
         .filter(task => {
           if (state.filter === "all") return true;
-          if (state.filter === "todo") return task.status !== "done";
+          if (state.filter === "todo") return task.status !== "done" && !hasDoneDuplicateForMember(task);
           if (state.filter === "urgent") return task.urgent;
           return task.status === state.filter;
         })
         .sort((a, b) => `${a.date || todayISO()} ${a.time}`.localeCompare(`${b.date || todayISO()} ${b.time}`));
+    }
+
+    function hasDoneDuplicateForMember(task) {
+      if (state.selectedMember === "all") return false;
+      const key = mergeKeyForSummary(task);
+      return state.tasks
+        .filter(item => !item.requestText && item.assignee === task.assignee && dateInRange(item.date || todayISO()))
+        .some(item => item.status === "done" && mergeKeyForSummary(item) === key);
     }
 
     function renderMembers() {
@@ -3417,20 +3426,28 @@
         list.innerHTML = `<div class="empty">${people.map(id => memberById(id).name).join("、")} 这一天暂时没有行程。</div>`;
         return;
       }
+      const rows = mergedExportRows(tasks);
       list.innerHTML = "";
-      tasks.slice(0, 10).forEach(task => {
+      rows.slice(0, 10).forEach(row => {
+        const peopleText = row.participants.size ? [...row.participants].join("、") : "";
+        const meta = [
+          row.location ? `地点：${row.location}` : "不指定地点",
+          row.rides.size ? `接送：${[...row.rides].join("、")}` : "",
+          row.executors.size ? `陪同/执行：${[...row.executors].join("、")}` : "",
+          row.statuses.size ? `状态：${[...row.statuses].join("、")}` : ""
+        ].filter(Boolean).join(" · ");
         const item = document.createElement("div");
         item.className = "schedule-preview-item";
         item.innerHTML = `
-          <strong>${escapeHtml(taskTimeText(task))} · ${escapeHtml(memberById(task.assignee).name)} · ${escapeHtml(displayTaskTitle(task))}</strong>
-          <span>${escapeHtml(locationById(task.location))}${task.status === "done" ? " · 已完成" : ""}</span>
+          <strong>${escapeHtml(row.timeText)} · ${escapeHtml(peopleText)} · ${escapeHtml(row.title)}</strong>
+          <span>${escapeHtml(meta)}</span>
         `;
         list.appendChild(item);
       });
-      if (tasks.length > 10) {
+      if (rows.length > 10) {
         const more = document.createElement("div");
         more.className = "schedule-preview-item";
-        more.innerHTML = `<span>还有 ${tasks.length - 10} 项没有显示，可以到成员页看完整列表。</span>`;
+        more.innerHTML = `<span>还有 ${rows.length - 10} 项没有显示，可以到成员页看完整列表。</span>`;
         list.appendChild(more);
       }
     }
@@ -4829,9 +4846,19 @@
           const personalKey = mergeKeyForSummary(task);
           if (renderedPersonalRows.has(personalKey)) return;
           renderedPersonalRows.add(personalKey);
+          list.appendChild(createTaskCard(bestPersonalTaskForRow(task, tasks)));
+          return;
         }
         list.appendChild(createTaskCard(task));
       });
+    }
+
+    function bestPersonalTaskForRow(task, tasks) {
+      const key = mergeKeyForSummary(task);
+      const matches = tasks.filter(item => mergeKeyForSummary(item) === key);
+      if (!matches.length) return task;
+      const done = matches.find(item => item.status === "done");
+      return done || matches[0];
     }
 
     function createTaskGroup(groupTasks) {
@@ -4914,7 +4941,7 @@
           <div class="task-actions">
             ${canOperate ? `<button class="action" type="button" data-action="doing">${appLanguage === "en" ? "Start" : "开始"}</button>` : ""}
             ${canOperate ? `<button class="action" type="button" data-action="done">${appLanguage === "en" ? "Done" : "完成"}</button>` : ""}
-            ${canOperate ? `<button class="action warn" type="button" data-action="feedback">${appLanguage === "en" ? "Feedback" : "内容反馈"}</button>` : ""}
+            ${canOperate ? `<button class="action warn" type="button" data-action="feedback">${appLanguage === "en" ? "Feedback" : "反馈"}</button>` : ""}
             <button class="action ${task.urgent ? "danger" : ""}" type="button" data-action="priority">${task.urgent ? "取消重点" : "重点"}</button>
             ${canManage ? `<button class="action" type="button" data-action="edit">编辑</button>` : ""}
             ${canManage && task.assignee === "driver" ? `<button class="action" type="button" data-action="assign">${task.assignedAt ? "再次分配" : "分配"}</button>` : ""}
@@ -4962,7 +4989,7 @@
           <div class="prep-line">准备：${current.prep || suggestPrep(current.title, current.location)}</div>
           <div class="task-actions">
             <button class="action" type="button" data-worker-action="done" data-task-id="${current.id}">完成</button>
-            <button class="action warn" type="button" data-worker-action="feedback" data-task-id="${current.id}">内容反馈</button>
+            <button class="action warn" type="button" data-worker-action="feedback" data-task-id="${current.id}">反馈</button>
           </div>
         </div>
         <div class="worker-next">
@@ -5317,21 +5344,23 @@
           .sort((a, b) => personSortIndex(a.id) - personSortIndex(b.id))
           .forEach(member => {
           const ownTasks = dateTasks.filter(task => task.assignee === member.id);
-          const done = ownTasks.filter(task => task.status === "done").length;
-          const open = ownTasks.length - done;
-          const percent = ownTasks.length ? Math.round((done / ownTasks.length) * 100) : 0;
-          const displayPercent = ownTasks.length ? percent : 100;
+          const rows = mergedSummaryRows(ownTasks, { preferDone: true });
+          const done = rows.filter(row => !row.hasOpen).length;
+          const open = rows.length - done;
+          const percent = rows.length ? Math.round((done / rows.length) * 100) : 0;
+          const displayPercent = rows.length ? percent : 100;
           const row = document.createElement("div");
-          const stateClass = ownTasks.length === 0 ? "idle" : open === 0 ? "good" : percent < 45 ? "busy" : "";
+          const stateClass = rows.length === 0 ? "idle" : open === 0 ? "good" : percent < 45 ? "busy" : "";
           row.className = `progress-row clickable ${stateClass}`;
           row.innerHTML = `
             <strong>${member.name}</strong>
-            <span class="progress-count">${done}/${ownTasks.length}</span>
+            <span class="progress-count">${done}/${rows.length}</span>
             <span class="bar"><span class="fill" style="width:${displayPercent}%"></span></span>
-            <span class="progress-note">${ownTasks.length ? `${open} 未完成 · ${percent}%` : "今天暂无事项"}</span>
+            <span class="progress-note">${rows.length ? `${open} 未完成 · ${percent}%` : "今天暂无事项"}</span>
           `;
           row.addEventListener("click", () => {
-            openTaskSummary(`${member.name}未完成事项`, ownTasks.filter(task => task.status !== "done"));
+            const doneKeys = new Set(ownTasks.filter(task => task.status === "done").map(mergeKeyForSummary));
+            openTaskSummary(`${member.name}未完成事项`, ownTasks.filter(task => task.status !== "done" && !doneKeys.has(mergeKeyForSummary(task))));
           });
           progress.appendChild(row);
         });
@@ -5431,7 +5460,7 @@
       return `semantic|${task.assignee}|${task.date || todayISO()}|${eventTimeTextForTask(task)}|${title}|${location}`;
     }
 
-    function mergedSummaryRows(tasks) {
+    function mergedSummaryRows(tasks, options = {}) {
       const rows = new Map();
       tasks.forEach(task => {
         const key = mergeKeyForSummary(task);
@@ -5461,6 +5490,12 @@
         row.statuses.add(statusText(task.status));
         if (task.status !== "done") row.hasOpen = true;
         row.count += 1;
+      });
+      rows.forEach(row => {
+        if ((options.preferDone || state.selectedMember !== "all") && row.statuses.has(statusText("done"))) {
+          row.hasOpen = false;
+          row.statuses = new Set([statusText("done")]);
+        }
       });
       return [...rows.values()]
         .sort((a, b) => a.timeText.localeCompare(b.timeText) || a.title.localeCompare(b.title));
@@ -5501,7 +5536,7 @@
         const member = memberById(assignee);
         const group = document.createElement("div");
         group.className = "sheet-person-group";
-        const rows = mergedSummaryRows(personTasks);
+        const rows = mergedSummaryRows(personTasks, { preferDone: true });
         const openCount = rows.filter(row => row.hasOpen).length;
         group.innerHTML = `
           <div class="sheet-person-title">
