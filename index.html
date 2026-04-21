@@ -142,7 +142,7 @@
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      gap: 10px;
+      gap: 16px;
       margin-top: 0;
     }
 
@@ -1555,7 +1555,9 @@
       padding: 11px;
       border-radius: 8px;
       border: 1px solid rgba(18, 24, 31, 0.08);
-      background: rgba(255, 255, 255, 0.72);
+      background:
+        linear-gradient(135deg, rgba(var(--progress-rgb, 0, 122, 255), 0.12), rgba(255, 255, 255, 0.78) 48%),
+        rgba(255, 255, 255, 0.72);
       font-size: 13px;
       box-shadow: var(--glow);
     }
@@ -1579,7 +1581,7 @@
 
     .bar {
       grid-column: 1 / -1;
-      height: 10px;
+      height: 12px;
       background: rgba(18, 24, 31, 0.06);
       border-radius: 999px;
       overflow: hidden;
@@ -1588,21 +1590,21 @@
 
     .fill {
       height: 100%;
-      background: linear-gradient(90deg, #8fd8ff, #007aff);
+      background: linear-gradient(90deg, var(--progress-soft, #8fd8ff), var(--progress-strong, #007aff));
       width: 0%;
       border-radius: inherit;
-      box-shadow: 0 0 18px rgba(0, 122, 255, 0.22);
+      box-shadow: 0 0 18px rgba(var(--progress-rgb, 0, 122, 255), 0.24);
       transition: width 0.24s ease;
     }
 
     .progress-row.good .fill {
-      background: linear-gradient(90deg, #7ee2a8, #30d158);
-      box-shadow: 0 0 18px rgba(48, 209, 88, 0.22);
+      background: linear-gradient(90deg, var(--progress-soft, #7ee2a8), var(--progress-strong, #30d158));
+      box-shadow: 0 0 18px rgba(var(--progress-rgb, 48, 209, 88), 0.22);
     }
 
     .progress-row.busy .fill {
-      background: linear-gradient(90deg, #ffd18a, #ff9f0a);
-      box-shadow: 0 0 18px rgba(255, 159, 10, 0.2);
+      background: linear-gradient(90deg, var(--progress-soft, #ffd18a), var(--progress-strong, #ff9f0a));
+      box-shadow: 0 0 18px rgba(var(--progress-rgb, 255, 159, 10), 0.2);
     }
 
     .progress-row.idle {
@@ -1612,6 +1614,55 @@
     .progress-row.idle .fill {
       background: linear-gradient(90deg, #c7f3d6, #30d158);
       box-shadow: 0 0 18px rgba(48, 209, 88, 0.18);
+    }
+
+    .schedule-preview {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(247, 248, 250, 0.78);
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      box-shadow: var(--glow);
+    }
+
+    .schedule-preview h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 860;
+    }
+
+    .schedule-preview-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .schedule-preview-item {
+      display: grid;
+      gap: 3px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid rgba(18, 24, 31, 0.06);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .schedule-preview-item strong {
+      font-size: 13px;
+      font-weight: 860;
+    }
+
+    .schedule-preview-item span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .schedule-preview .empty {
+      min-height: 68px;
+      padding: 12px;
+      font-size: 13px;
     }
 
     .empty {
@@ -1652,11 +1703,11 @@
 
       .topbar {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(88px, 104px);
+        grid-template-columns: 1fr;
         width: 100%;
         overflow: hidden;
         align-items: start;
-        column-gap: 10px;
+        gap: 8px;
         padding: 6px 0 12px;
       }
 
@@ -1672,13 +1723,16 @@
 
       .identity-bar {
         position: static;
-        width: 100%;
+        width: auto;
+        max-width: 100%;
         min-width: 0;
+        justify-self: end;
         justify-content: flex-end;
+        gap: 14px;
       }
 
       .identity-pill {
-        flex: 1;
+        flex: 0 1 auto;
         min-width: 0;
         min-height: 30px;
         padding: 0 9px;
@@ -2239,8 +2293,8 @@
         <p>家里今天要做的事，一眼就看明白。</p>
       </div>
       <div class="identity-bar">
-        <button class="inbox-pill" type="button" id="butlerInboxBtn" aria-label="待确认信箱" hidden>✉<span class="inbox-count" id="butlerInboxCount">0</span></button>
         <button class="identity-pill" type="button" id="switchUserBtn">当前身份：未确认</button>
+        <button class="inbox-pill" type="button" id="butlerInboxBtn" aria-label="待确认信箱" hidden>✉<span class="inbox-count" id="butlerInboxCount">0</span></button>
       </div>
     </header>
 
@@ -2285,6 +2339,12 @@
               <div class="field">
                 <label for="scheduleDate">日期</label>
                 <input id="scheduleDate" type="date" />
+              </div>
+              <div class="schedule-preview" id="schedulePreview">
+                <h3>当天已有行程</h3>
+                <div class="schedule-preview-list" id="schedulePreviewList">
+                  <div class="empty">先选择成员和日期，这里会显示当天已有安排。</div>
+                </div>
               </div>
               <div class="field">
                 <label for="scheduleTitle">描述事项</label>
@@ -2800,6 +2860,7 @@
     }
 
     function migrateTasks(tasks) {
+      const now = Date.now();
       const replacements = [
         ["送小儿子去兴趣班", "安排 Aron 去兴趣班"],
         ["陪二女儿完成英文阅读", "陪 Alisa 完成英文阅读"],
@@ -2825,6 +2886,7 @@
           reassignedFrom: task.reassignedFrom || "",
           requestText: task.requestText || "",
           requestFrom: task.requestFrom || "",
+          requestCreatedAt: task.requestCreatedAt || (task.requestText ? now : 0),
           prep: task.prep || suggestPrep(match ? match[1] : task.title, task.location || "none"),
           prepReminderSent: task.prepReminderSent || false
         };
@@ -3323,6 +3385,45 @@
       } else {
         if (routineAssignee && !routineAssignee.value) routineAssignee.value = "helperA";
       }
+      renderSchedulePreview();
+    }
+
+    function renderSchedulePreview() {
+      const list = document.getElementById("schedulePreviewList");
+      const personSelect = document.getElementById("schedulePerson");
+      const dateInput = document.getElementById("scheduleDate");
+      if (!list || !personSelect || !dateInput) return;
+      const people = selectedValues(personSelect).filter(id => id !== "all");
+      const date = dateInput.value || state.selectedDate;
+      if (!people.length) {
+        list.innerHTML = `<div class="empty">先选择成员，这里会显示这一天已有行程，方便避开冲突时间。</div>`;
+        return;
+      }
+      const tasks = state.tasks
+        .filter(task => !task.requestText)
+        .filter(task => (task.date || todayISO()) === date)
+        .filter(task => people.includes(task.assignee))
+        .sort((a, b) => `${a.time || "09:00"} ${personSortIndex(a.assignee)}`.localeCompare(`${b.time || "09:00"} ${personSortIndex(b.assignee)}`));
+      if (!tasks.length) {
+        list.innerHTML = `<div class="empty">${people.map(id => memberById(id).name).join("、")} 这一天暂时没有行程。</div>`;
+        return;
+      }
+      list.innerHTML = "";
+      tasks.slice(0, 10).forEach(task => {
+        const item = document.createElement("div");
+        item.className = "schedule-preview-item";
+        item.innerHTML = `
+          <strong>${escapeHtml(taskTimeText(task))} · ${escapeHtml(memberById(task.assignee).name)} · ${escapeHtml(displayTaskTitle(task))}</strong>
+          <span>${escapeHtml(locationById(task.location))}${task.status === "done" ? " · 已完成" : ""}</span>
+        `;
+        list.appendChild(item);
+      });
+      if (tasks.length > 10) {
+        const more = document.createElement("div");
+        more.className = "schedule-preview-item";
+        more.innerHTML = `<span>还有 ${tasks.length - 10} 项没有显示，可以到成员页看完整列表。</span>`;
+        list.appendChild(more);
+      }
     }
 
     function currentRoutineOwner() {
@@ -3567,7 +3668,7 @@
       notifyAssignee(assignee, task.title);
     }
 
-    function createTask({ title, assignee, location = "none", time = "09:00", endTime = "", prep, followUp = "none", date = state.selectedDate, groupId = "", groupTitle = "", relationLabel = "", reassignedFrom = "", urgent = false, notify = true, requestText = "", requestFrom = "" }) {
+    function createTask({ title, assignee, location = "none", time = "09:00", endTime = "", prep, followUp = "none", date = state.selectedDate, groupId = "", groupTitle = "", relationLabel = "", reassignedFrom = "", urgent = false, notify = true, requestText = "", requestFrom = "", requestCreatedAt = 0 }) {
       state.filter = "all";
       state.tasks.push({
         id: uid(),
@@ -3585,6 +3686,7 @@
         reassignedFrom,
         requestText,
         requestFrom,
+        requestCreatedAt: requestText ? (requestCreatedAt || Date.now()) : 0,
         prep: prep || suggestPrep(title, location),
         prepReminderSent: false,
         status: "todo",
@@ -4870,17 +4972,32 @@
       return ["mom", "driver"].includes(state.currentUser);
     }
 
-    function pendingButlerRequests() {
+    const rawRequestRetentionMs = 3 * 24 * 60 * 60 * 1000;
+
+    function pruneOldRawRequests(persist = true) {
+      const cutoff = Date.now() - rawRequestRetentionMs;
+      const before = state.tasks.length;
+      state.tasks = state.tasks.filter(task => !task.requestText || (task.requestCreatedAt || 0) >= cutoff);
+      if (persist && state.tasks.length !== before) save();
+    }
+
+    function butlerRequests(includeDone = true) {
+      const cutoff = Date.now() - rawRequestRetentionMs;
       return state.tasks
-        .filter(task => task.assignee === "driver" && task.requestText)
-        .filter(task => task.status !== "done")
+        .filter(task => task.assignee === "driver" && task.requestText && (task.requestCreatedAt || 0) >= cutoff)
+        .filter(task => includeDone || task.status !== "done")
         .sort((a, b) => `${b.date || todayISO()} ${b.time || "09:00"}`.localeCompare(`${a.date || todayISO()} ${a.time || "09:00"}`));
+    }
+
+    function pendingButlerRequests() {
+      return butlerRequests(false);
     }
 
     function renderButlerInboxButton() {
       const button = document.getElementById("butlerInboxBtn");
       const count = document.getElementById("butlerInboxCount");
       const canSee = canSeeButlerInbox();
+      pruneOldRawRequests(false);
       const requests = pendingButlerRequests();
       button.hidden = !canSee;
       if (!canSee) return;
@@ -4894,7 +5011,7 @@
       const content = document.getElementById("overviewSheetContent");
       const actions = document.getElementById("overviewSheetActions");
       const closeButton = document.getElementById("closeOverviewSheet");
-      const requests = pendingButlerRequests();
+      const requests = butlerRequests(true);
       sheet.classList.remove("feedback-sheet");
       document.getElementById("overviewSheetTitle").textContent = "待确认信箱";
       closeButton.hidden = false;
@@ -4903,7 +5020,7 @@
       actions.innerHTML = "";
       content.innerHTML = "";
       if (!requests.length) {
-        content.innerHTML = `<div class="empty">这里暂时没有待确认的原始请求。</div>`;
+        content.innerHTML = `<div class="empty">这里暂时没有近 3 天的原始请求。</div>`;
         sheet.hidden = false;
         return;
       }
@@ -4911,11 +5028,11 @@
         const card = document.createElement("div");
         card.className = "butler-request-card";
         card.innerHTML = `
-          <strong>${dateShortText(task.date || todayISO())} ${task.time || ""} · ${escapeHtml(memberById(task.requestFrom).name || "收到新的请求")}</strong>
+          <strong>${dateShortText(task.date || todayISO())} ${task.time || ""} · ${escapeHtml(memberById(task.requestFrom).name || "收到新的请求")}${task.status === "done" ? " · 已处理" : ""}</strong>
           <pre class="raw-request-text">${escapeHtml(task.requestText)}</pre>
           <div class="task-actions">
             <button class="action" type="button" data-open-schedule="${task.id}">去写日程</button>
-            <button class="action" type="button" data-done-request="${task.id}">已处理</button>
+            ${task.status === "done" ? "" : `<button class="action" type="button" data-done-request="${task.id}">标记已处理</button>`}
           </div>
         `;
         content.appendChild(card);
@@ -5198,6 +5315,10 @@
           const row = document.createElement("div");
           const stateClass = ownTasks.length === 0 ? "idle" : open === 0 ? "good" : percent < 45 ? "busy" : "";
           row.className = `progress-row clickable ${stateClass}`;
+          const hue = ownTasks.length === 0 ? 145 : Math.round(30 + displayPercent * 1.15);
+          row.style.setProperty("--progress-soft", `hsl(${hue}, 82%, 78%)`);
+          row.style.setProperty("--progress-strong", `hsl(${hue}, 78%, 45%)`);
+          row.style.setProperty("--progress-rgb", hue < 70 ? "255, 159, 10" : hue < 130 ? "52, 199, 89" : "0, 122, 255");
           row.innerHTML = `
             <strong>${member.name}</strong>
             <span class="progress-count">${done}/${ownTasks.length}</span>
@@ -5653,6 +5774,7 @@
     function render() {
       try {
         pruneExpiredFeedbacks();
+        pruneOldRawRequests();
         document.querySelectorAll("[data-date-text]").forEach(element => {
           element.textContent = selectedDateDisplayText();
         });
@@ -5816,6 +5938,10 @@
 
     document.getElementById("scheduleNoEndTime").addEventListener("change", event => {
       if (event.target.checked) document.getElementById("scheduleEndTime").value = "";
+    });
+
+    ["schedulePerson", "scheduleDate", "scheduleTime"].forEach(id => {
+      document.getElementById(id).addEventListener("change", renderSchedulePreview);
     });
 
     document.getElementById("routineEndTime").addEventListener("input", event => {
