@@ -1711,6 +1711,104 @@
       display: none;
     }
 
+    #memberSheet .member-sheet-backdrop {
+      background: rgba(15, 23, 42, 0.18);
+      backdrop-filter: blur(2px);
+    }
+
+    #memberSheet .member-sheet-panel {
+      border-radius: 20px 20px 10px 10px;
+      background: rgba(255, 255, 255, 0.98);
+      border-color: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.2), var(--glow);
+    }
+
+    #memberSheet .panel-head {
+      padding: 12px 16px 10px;
+      border-bottom: 1px solid rgba(18, 24, 31, 0.06);
+    }
+
+    #memberSheet .panel-head h2 {
+      font-size: 19px;
+      font-weight: 920;
+    }
+
+    #memberSheet #closeMemberSheet {
+      min-height: 34px;
+      border-radius: 999px;
+      padding: 0 13px;
+      background: rgba(247, 248, 250, 0.88);
+      color: var(--ink);
+      border-color: rgba(18, 24, 31, 0.08);
+      box-shadow: none;
+    }
+
+    .sheet-member-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px 16px 18px;
+      max-height: min(62vh, 620px);
+      overflow: auto;
+    }
+
+    .sheet-member-list .member-button {
+      grid-template-columns: 34px minmax(0, 1fr);
+      min-height: 56px;
+      padding: 10px;
+      border-radius: 16px;
+      background: rgba(247, 248, 250, 0.66);
+      border: 1px solid rgba(18, 24, 31, 0.06);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+      transform: none;
+    }
+
+    .sheet-member-list .member-button.manager {
+      background: rgba(247, 248, 250, 0.66);
+      border-color: rgba(18, 24, 31, 0.06);
+    }
+
+    .sheet-member-list .member-button.active {
+      background: rgba(245, 250, 255, 0.96);
+      border-color: rgba(0, 122, 255, 0.32);
+      box-shadow: 0 10px 24px rgba(0, 122, 255, 0.1), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+    }
+
+    .sheet-member-list .member-button.active::after {
+      content: "✓";
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: #007aff;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .sheet-member-list .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      box-shadow: none;
+      font-size: 14px;
+    }
+
+    .sheet-member-list .member-name {
+      font-size: 15px;
+      font-weight: 860;
+      letter-spacing: 0;
+    }
+
+    .sheet-member-list .member-role,
+    .sheet-member-list .manager-mark,
+    .sheet-member-list .count {
+      display: none;
+    }
+
     .add-result-list {
       border-top: 1px solid var(--line);
       background: rgba(247, 248, 250, 0.45);
@@ -2326,7 +2424,38 @@
       }
 
       .sheet-member-list {
-        max-height: none;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-height: min(64vh, 620px);
+        padding: 12px 14px calc(18px + env(safe-area-inset-bottom));
+        gap: 10px;
+        overflow: auto;
+      }
+
+      #memberSheet .member-sheet-panel {
+        bottom: 8px;
+        width: min(560px, calc(100vw - 14px));
+        max-height: calc(82vh - env(safe-area-inset-bottom));
+        border-radius: 22px 22px 12px 12px;
+      }
+
+      #memberSheet .panel-head {
+        padding: 10px 14px 9px;
+      }
+
+      .sheet-member-list .member-button {
+        min-height: 52px;
+        padding: 9px;
+        border-radius: 15px;
+      }
+
+      .sheet-member-list .member-button .avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 11px;
+      }
+
+      .sheet-member-list .member-name {
+        font-size: 14px;
       }
 
       .member-button .count {
