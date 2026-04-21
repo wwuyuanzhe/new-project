@@ -2496,9 +2496,16 @@
                   <option value="kk">家庭教师 KK</option>
                 </select>
               </div>
+              <div class="field">
+                <label for="scheduleUrgent">是否重点</label>
+                <select id="scheduleUrgent">
+                  <option value="no" selected>无</option>
+                  <option value="yes">是重点</option>
+                </select>
+              </div>
             <button class="primary" type="submit">保存日程</button>
           </form>
-            <div class="helper-text">接送人默认无；如果选择接送人或执行人，小助手会自动生成本人、接送人和执行人的事项。</div>
+            <div class="helper-text">接送人默认无；选择“是重点”后，本人、接送人和执行人的相关事项都会直接标记为重点。</div>
           </div>
           <div class="action-pane" id="feedbackPanel" hidden>
             <form class="quick-form" id="feedbackForm">
@@ -3784,8 +3791,7 @@
       const exists = state.tasks.some(task =>
         task.assignee === assignee &&
         (task.date || todayISO()) === date &&
-        (task.routineId && routine.id ? task.routineId === routine.id : task.title === routine.title && task.location === routine.location && task.time === routine.time) &&
-        task.status !== "done"
+        (task.routineId && routine.id ? task.routineId === routine.id : task.title === routine.title && task.location === routine.location && task.time === routine.time)
       );
       if (exists) return false;
 
@@ -6128,7 +6134,7 @@
 
     function syncRecurringRoutines() {
       const dates = state.rangeMode === "week" ? datesForSelectedWeek() : [state.selectedDate];
-      let changed = false;
+      let changed = dedupeRoutineTasks();
       Object.entries(dailyRoutines).forEach(([assignee, routines]) => {
         routines.forEach(routine => {
           if (!routine.id) routine.id = uid();
@@ -6141,6 +6147,32 @@
         localStorage.setItem("familyTasks", JSON.stringify(state.tasks));
         localStorage.setItem("familyRoutines", JSON.stringify(dailyRoutines));
       }
+    }
+
+    function dedupeRoutineTasks() {
+      const seen = new Map();
+      const nextTasks = [];
+      let changed = false;
+      state.tasks.forEach(task => {
+        if (!task.routineId) {
+          nextTasks.push(task);
+          return;
+        }
+        const key = [task.assignee, task.date || todayISO(), task.routineId].join("|");
+        const existingIndex = seen.get(key);
+        if (existingIndex === undefined) {
+          seen.set(key, nextTasks.length);
+          nextTasks.push(task);
+          return;
+        }
+        changed = true;
+        const existing = nextTasks[existingIndex];
+        if (existing.status !== "done" && task.status === "done") {
+          nextTasks[existingIndex] = task;
+        }
+      });
+      if (changed) state.tasks = nextTasks;
+      return changed;
     }
 
     document.querySelectorAll("[data-date-input]").forEach(input => {
@@ -6245,6 +6277,7 @@
       const date = document.getElementById("scheduleDate").value || state.selectedDate;
       const endTime = document.getElementById("scheduleNoEndTime").checked ? "" : document.getElementById("scheduleEndTime").value;
       const selectedDrivers = normalizeDriverIds(selectedValues(document.getElementById("scheduleDriver")));
+      const urgent = document.getElementById("scheduleUrgent").value === "yes";
       addLinkedScheduleBatch({
         personIds,
         title,
@@ -6254,7 +6287,8 @@
         rideMode: selectedDrivers.length ? "yes" : "no",
         companionIds,
         driverIds: selectedDrivers,
-        date
+        date,
+        urgent
       });
       document.getElementById("scheduleTitle").value = "";
       document.getElementById("scheduleEndTime").value = "";
@@ -6263,6 +6297,7 @@
       setSelectedValues(document.getElementById("scheduleLocation"), []);
       setSelectedValues(document.getElementById("schedulePerson"), []);
       setSelectedValues(document.getElementById("scheduleCompanion"), []);
+      document.getElementById("scheduleUrgent").value = "no";
       save();
       render();
     });
