@@ -2209,17 +2209,9 @@
                 <select id="scheduleLocation"></select>
               </div>
               <div class="field">
-                <label for="scheduleRide">接送</label>
-                <select id="scheduleRide">
-                  <option value="no">不需要，单独事项</option>
-                  <option value="yes">需要接送</option>
-                  <option value="dropoff">只送去</option>
-                  <option value="pickup">只接回</option>
-              </select>
-            </div>
-              <div class="field">
                 <label for="scheduleDriver">接送人</label>
                 <select id="scheduleDriver">
+                  <option value="none">无</option>
                   <option value="driver">陈管家</option>
                   <option value="driverLei">司机阿磊</option>
                 </select>
@@ -2233,12 +2225,16 @@
                   <option value="helperC">服务员 C</option>
                   <option value="driver">陈管家</option>
                   <option value="driverLei">司机阿磊</option>
+                  <option value="mom">妈妈</option>
+                  <option value="dad">爸爸</option>
+                  <option value="grandma">姥姥</option>
+                  <option value="grandpa">姥爷</option>
                   <option value="kk">家庭教师 KK</option>
                 </select>
               </div>
             <button class="primary" type="submit">保存日程/事项</button>
           </form>
-            <div class="helper-text">如果不选接送、不指定执行人，就是单独日程；如果选择接送或执行人，小助手会自动生成本人、接送人和执行人的事项。</div>
+            <div class="helper-text">接送人默认无；如果选择接送人或执行人，小助手会自动生成本人、接送人和执行人的事项。</div>
           </div>
           <div class="action-pane" id="feedbackPanel" hidden>
             <form class="quick-form" id="feedbackForm">
@@ -2486,17 +2482,9 @@
           </div>
           <div class="reassign-grid">
             <div class="field">
-              <label for="reassignRide">接送</label>
-              <select id="reassignRide">
-                <option value="no">不需要，单独事项</option>
-                <option value="yes">需要接送</option>
-                <option value="dropoff">只送去</option>
-                <option value="pickup">只接回</option>
-              </select>
-            </div>
-            <div class="field">
               <label for="reassignDriver">接送人</label>
               <select id="reassignDriver">
+                <option value="none">无</option>
                 <option value="driver">陈管家</option>
                 <option value="driverLei">司机阿磊</option>
               </select>
@@ -4434,7 +4422,8 @@
       const groupTitle = `${peopleText} ${title}`;
       const start = timeToMinutes(time);
       const companionText = selectedCompanions.map(id => memberById(id).name).join("、");
-      const followUp = selectedCompanions.length ? selectedCompanions.join(",") : (rideMode !== "no" ? driverId : "none");
+      const effectiveRideMode = driverId && driverId !== "none" ? (rideMode || "yes") : "no";
+      const followUp = selectedCompanions.length ? selectedCompanions.join(",") : (effectiveRideMode !== "no" ? driverId : "none");
 
       personIds.forEach(personId => {
         const person = memberById(personId);
@@ -4456,11 +4445,11 @@
         });
       });
 
-      if (rideMode !== "no") {
+      if (effectiveRideMode !== "no") {
         const driver = memberById(driverId);
-        const rideTitle = rideMode === "pickup"
+        const rideTitle = effectiveRideMode === "pickup"
           ? `接${peopleText}${title}结束`
-          : rideMode === "dropoff"
+          : effectiveRideMode === "dropoff"
             ? `送${peopleText}去${title}`
             : `接送${peopleText}去${title}`;
         createTask({
@@ -4468,7 +4457,7 @@
           assignee: driverId,
           date,
           location: location === "none" ? "outdoor-parking" : location,
-          time: rideMode === "pickup" ? time : minutesToTime(clampDayMinutes(start - 30)),
+          time: effectiveRideMode === "pickup" ? time : minutesToTime(clampDayMinutes(start - 30)),
           groupId,
           groupTitle,
           relationLabel: `${driver.name}接送`,
@@ -4497,7 +4486,7 @@
       });
 
       if (!reassignedFrom) {
-        pushNotice(`已保存「${groupTitle}」：每个人 1 条主任务，${driverId && rideMode !== "no" ? "接送已合并，" : ""}${companionText ? `跟进人是 ${companionText}。` : "未指定跟进人。"}`, [driverId, ...selectedCompanions, ...personIds]);
+        pushNotice(`已保存「${groupTitle}」：每个人 1 条主任务，${effectiveRideMode !== "no" ? "接送已合并，" : ""}${companionText ? `跟进人是 ${companionText}。` : "未指定跟进人。"}`, [effectiveRideMode !== "no" ? driverId : "", ...selectedCompanions, ...personIds]);
       }
     }
 
@@ -4764,8 +4753,7 @@
       document.getElementById("reassignTime").value = task.time || "09:00";
       document.getElementById("reassignEndTime").value = task.endTime || "";
       document.getElementById("reassignLocation").value = task.location || "none";
-      document.getElementById("reassignRide").value = rideTask ? "yes" : "no";
-      document.getElementById("reassignDriver").value = rideTask ? rideTask.assignee : "driver";
+      document.getElementById("reassignDriver").value = rideTask ? rideTask.assignee : "none";
       setSelectedValues(document.getElementById("reassignPeople"), people.length ? people : [task.assignee]);
       setSelectedValues(document.getElementById("reassignExecutors"), executors);
       document.getElementById("reassignSheet").hidden = false;
@@ -4786,8 +4774,7 @@
       document.getElementById("reassignTime").value = primary.time || task.time || "09:00";
       document.getElementById("reassignEndTime").value = primary.endTime || task.endTime || "";
       document.getElementById("reassignLocation").value = primary.location || task.location || "none";
-      document.getElementById("reassignRide").value = rideTask ? "yes" : "no";
-      document.getElementById("reassignDriver").value = rideTask ? rideTask.assignee : "driver";
+      document.getElementById("reassignDriver").value = rideTask ? rideTask.assignee : "none";
       setSelectedValues(document.getElementById("reassignPeople"), people.length ? people : [task.assignee]);
       setSelectedValues(document.getElementById("reassignExecutors"), executors);
       document.getElementById("reassignSheet").hidden = false;
@@ -4826,7 +4813,7 @@
           time,
           endTime,
           location,
-          rideMode: document.getElementById("reassignRide").value,
+          rideMode: document.getElementById("reassignDriver").value === "none" ? "no" : "yes",
           driverId: document.getElementById("reassignDriver").value,
           companionIds: executors.length ? executors : ["none"],
           reassignedFrom: sourceTask.id
@@ -4885,14 +4872,15 @@
         time,
         endTime,
         location,
-        rideMode: document.getElementById("reassignRide").value,
+        rideMode: document.getElementById("reassignDriver").value === "none" ? "no" : "yes",
         driverId: document.getElementById("reassignDriver").value,
         companionIds: executors.length ? executors : ["none"],
         groupId,
         urgent,
         notify: false
       });
-      const newTargets = [...new Set([...oldTargets, ...people, ...executors, document.getElementById("reassignDriver").value])];
+      const selectedDriver = document.getElementById("reassignDriver").value;
+      const newTargets = [...new Set([...oldTargets, ...people, ...executors, selectedDriver === "none" ? "" : selectedDriver].filter(Boolean))];
       pushNotice(`事项已更新：${dateShortText(date)} ${time}「${title}」。请 ${memberNamesText(newTargets)} 查看新的安排。`, newTargets);
       closeReassignSheet();
       save();
@@ -5531,15 +5519,16 @@
       const companionIds = executors.length ? executors : ["none"];
       const date = document.getElementById("scheduleDate").value || state.selectedDate;
       const endTime = document.getElementById("scheduleNoEndTime").checked ? "" : document.getElementById("scheduleEndTime").value;
+      const selectedDriver = document.getElementById("scheduleDriver").value;
       addLinkedScheduleBatch({
         personIds,
         title,
         time: document.getElementById("scheduleTime").value || "09:00",
         endTime,
         location: document.getElementById("scheduleLocation").value,
-        rideMode: document.getElementById("scheduleRide").value,
+        rideMode: selectedDriver === "none" ? "no" : "yes",
         companionIds,
-        driverId: document.getElementById("scheduleDriver").value,
+        driverId: selectedDriver,
         date
       });
       document.getElementById("scheduleTitle").value = "";
