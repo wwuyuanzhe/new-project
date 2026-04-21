@@ -383,6 +383,7 @@
     }
 
     .member-button {
+      position: relative;
       min-width: 0;
       display: grid;
       grid-template-columns: 38px 1fr auto;
@@ -452,6 +453,26 @@
       border-radius: 8px;
       color: var(--muted);
       font-weight: 700;
+    }
+
+    .member-notice-dot {
+      position: absolute;
+      right: 8px;
+      top: 7px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #ff3b30;
+      color: #fff;
+      border: 2px solid rgba(255, 255, 255, 0.96);
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 950;
+      box-shadow: 0 7px 15px rgba(255, 59, 48, 0.24);
     }
 
     .main {
@@ -680,7 +701,7 @@
     .routine-editor {
       padding: 14px;
       display: grid;
-      grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) 140px 140px 160px minmax(160px, 1fr);
+      grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) 120px 120px minmax(150px, 1fr) minmax(150px, 1fr);
       gap: 10px;
       align-items: end;
       border-bottom: 1px solid var(--line);
@@ -689,6 +710,31 @@
 
     .routine-editor .primary {
       grid-column: 1 / -1;
+    }
+
+    .weekday-picker {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+      grid-column: 1 / -1;
+    }
+
+    .weekday-picker label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-height: 38px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid rgba(18, 24, 31, 0.08);
+      color: var(--ink);
+      font-weight: 820;
+    }
+
+    .weekday-picker input {
+      width: auto;
+      min-height: auto;
     }
 
     .routine-button {
@@ -1948,6 +1994,14 @@
         height: 32px;
       }
 
+      .member-notice-dot {
+        right: 5px;
+        top: 5px;
+        min-width: 17px;
+        height: 17px;
+        font-size: 10px;
+      }
+
       .member-role,
       .manager-mark {
         display: none;
@@ -2495,7 +2549,7 @@
           <form class="routine-editor" id="routineForm">
             <div class="field">
               <label for="routineAssignee">给谁</label>
-              <select id="routineAssignee"></select>
+              <select id="routineAssignee" multiple></select>
             </div>
             <div class="field">
               <label for="routineName">日常事项</label>
@@ -2512,7 +2566,19 @@
             </div>
             <div class="field">
               <label for="routineLocation">地点</label>
-              <select id="routineLocation"></select>
+              <select id="routineLocation" multiple></select>
+            </div>
+            <div class="field">
+              <label>每周几</label>
+              <div class="weekday-picker" id="routineWeekdays">
+                <label><input type="checkbox" value="1" />一</label>
+                <label><input type="checkbox" value="2" />二</label>
+                <label><input type="checkbox" value="3" />三</label>
+                <label><input type="checkbox" value="4" />四</label>
+                <label><input type="checkbox" value="5" />五</label>
+                <label><input type="checkbox" value="6" />六</label>
+                <label><input type="checkbox" value="7" />日</label>
+              </div>
             </div>
             <div class="field">
               <label for="routinePrep">提前准备</label>
@@ -2541,7 +2607,10 @@
             </div>
           </div>
           <div class="priority-focus" id="memberPriorityFocus" hidden>
-            <h3>今日重点</h3>
+            <div class="text-actions">
+              <button class="action" type="button" id="memberTodayTextBtn">今天文字</button>
+              <button class="action" type="button" id="memberTomorrowTextBtn">明天文字</button>
+            </div>
             <div class="dashboard-list" id="memberPriorityList"></div>
           </div>
           <div class="task-toolbar" id="filters">
@@ -2896,6 +2965,9 @@
       Object.keys(routines).forEach(assignee => {
         routines[assignee] = routines[assignee].map(routine => ({
           ...routine,
+          id: routine.id || uid(),
+          weekdays: routine.weekdays || [1, 2, 3, 4, 5, 6, 7],
+          location: routine.location || "none",
           prep: routine.prep || suggestPrep(routine.title, routine.location)
         }));
       });
@@ -2930,6 +3002,7 @@
           requestText: task.requestText || "",
           requestFrom: task.requestFrom || "",
           requestCreatedAt: task.requestCreatedAt || (task.requestText ? now : 0),
+          routineId: task.routineId || "",
           prep: task.prep || suggestPrep(match ? match[1] : task.title, task.location || "none"),
           prepReminderSent: task.prepReminderSent || false
         };
@@ -3291,6 +3364,11 @@
       return appLanguage === "en" ? "Selected day" : "所选日期";
     }
 
+    function weekdayNumber(dateISO) {
+      const day = new Date(`${dateISO}T00:00:00`).getDay();
+      return day === 0 ? 7 : day;
+    }
+
     function selectedDateDisplayText() {
       return `${selectedDateLabel()} · ${selectedDateText()}`;
     }
@@ -3342,6 +3420,10 @@
         const button = document.createElement("button");
         button.className = `member-button ${member.manager ? "manager" : ""} ${state.selectedMember === member.id ? "active" : ""}`;
         button.type = "button";
+        const noticeCount = member.id === "all" ? 0 : unacknowledgedNoticeCount(member.id);
+        const noticeBadge = noticeCount
+          ? `<span class="member-notice-dot" aria-label="${member.name}有${noticeCount}条未确认消息">${noticeCount > 99 ? "99+" : noticeCount}</span>`
+          : "";
         button.innerHTML = `
           <span class="avatar" style="background:${member.color}">${member.initials}</span>
           <span>
@@ -3350,6 +3432,7 @@
             ${member.manager ? `<span class="manager-mark">统筹权限</span>` : ""}
           </span>
           <span class="count">${openCount}</span>
+          ${noticeBadge}
         `;
         button.addEventListener("click", () => {
           state.selectedMember = member.id;
@@ -3458,11 +3541,11 @@
       if (exportStartDate && !exportStartDate.value) exportStartDate.value = state.selectedDate;
       if (exportEndDate && !exportEndDate.value) exportEndDate.value = state.selectedDate;
       if (state.selectedMember !== "all") {
-        if (routineAssignee) routineAssignee.value = state.selectedMember;
+        if (routineAssignee && !selectedValues(routineAssignee).length) setSelectedValues(routineAssignee, [state.selectedMember]);
       } else if (!isManagerUser() && state.currentUser) {
-        if (routineAssignee) routineAssignee.value = state.currentUser;
+        if (routineAssignee && !selectedValues(routineAssignee).length) setSelectedValues(routineAssignee, [state.currentUser]);
       } else {
-        if (routineAssignee && !routineAssignee.value) routineAssignee.value = "helperA";
+        if (routineAssignee && !selectedValues(routineAssignee).length) setSelectedValues(routineAssignee, ["helperA"]);
       }
       renderSchedulePreview();
     }
@@ -3515,8 +3598,26 @@
 
     function currentRoutineOwner() {
       const select = document.getElementById("routineAssignee");
-      if (state.mobileTab === "add" && select) return select.value || "helperA";
+      if (state.mobileTab === "add" && select) return selectedValues(select)[0] || "helperA";
       return state.selectedMember;
+    }
+
+    function selectedRoutineAssignees() {
+      const select = document.getElementById("routineAssignee");
+      const selected = select ? selectedValues(select).filter(id => id !== "all") : [];
+      return selected.length ? selected : [currentRoutineOwner()].filter(id => id && id !== "all");
+    }
+
+    function selectedRoutineWeekdays() {
+      const checked = Array.from(document.querySelectorAll("#routineWeekdays input:checked")).map(input => Number(input.value));
+      return checked.length ? checked : [1, 2, 3, 4, 5, 6, 7];
+    }
+
+    function setRoutineWeekdays(values) {
+      const wanted = new Set((values && values.length ? values : [1, 2, 3, 4, 5, 6, 7]).map(Number));
+      document.querySelectorAll("#routineWeekdays input").forEach(input => {
+        input.checked = wanted.has(Number(input.value));
+      });
     }
 
     function resetRoutineForm() {
@@ -3525,7 +3626,8 @@
       document.getElementById("routineTime").value = "09:00";
       document.getElementById("routineEndTime").value = "";
       document.getElementById("routineNoEndTime").checked = true;
-      document.getElementById("routineLocation").value = "none";
+      setSelectedValues(document.getElementById("routineLocation"), []);
+      setRoutineWeekdays([1, 2, 3, 4, 5, 6, 7]);
       document.getElementById("routinePrep").value = "";
     }
 
@@ -3613,6 +3715,7 @@
           <button class="routine-button ${state.editingRoutineIndex === index ? "active" : ""}" type="button" data-action="add">
             <span class="routine-title">${routine.title}</span>
             <span class="routine-meta">${taskTimeText(routine)} · ${locationById(routine.location)}</span>
+            <span class="routine-meta">每周：${weekdayText(routine.weekdays)}</span>
             <span class="routine-meta">提前准备：${routine.prep || suggestPrep(routine.title, routine.location)}</span>
           </button>
           <div class="routine-card-actions">
@@ -3635,56 +3738,70 @@
       document.getElementById("routineTime").value = routine.time;
       document.getElementById("routineEndTime").value = routine.endTime || "";
       document.getElementById("routineNoEndTime").checked = !routine.endTime;
-      document.getElementById("routineLocation").value = routine.location;
+      setSelectedValues(document.getElementById("routineLocation"), String(routine.location || "none").split(",").filter(Boolean));
+      setRoutineWeekdays(routine.weekdays);
       document.getElementById("routinePrep").value = routine.prep || suggestPrep(routine.title, routine.location);
       render();
     }
 
+    function weekdayText(days) {
+      const labels = { 1: "一", 2: "二", 3: "三", 4: "四", 5: "五", 6: "六", 7: "日" };
+      const list = (days && days.length ? days : [1, 2, 3, 4, 5, 6, 7]).map(day => labels[day]).filter(Boolean);
+      return list.length === 7 ? "每天" : list.join("、");
+    }
+
     function deleteRoutine(index) {
       const ownerId = currentRoutineOwner();
+      const routine = dailyRoutines[ownerId][index];
       dailyRoutines[ownerId].splice(index, 1);
+      removeRoutineFutureTasks(routine && routine.id);
       resetRoutineForm();
       save();
       render();
     }
 
-    function addRoutineTask(assignee, routine) {
+    function removeRoutineFutureTasks(routineId) {
+      if (!routineId) return;
+      state.tasks = state.tasks.filter(task => task.routineId !== routineId || task.status === "done" || (task.date || todayISO()) < todayISO());
+    }
+
+    function addRoutineTask(assignee, routine, date = state.selectedDate, notify = true) {
+      const days = routine.weekdays || [1, 2, 3, 4, 5, 6, 7];
+      if (!days.includes(weekdayNumber(date))) return false;
       const exists = state.tasks.some(task =>
         task.assignee === assignee &&
-        (task.date || todayISO()) === state.selectedDate &&
-        task.title === routine.title &&
-        task.location === routine.location &&
-        task.time === routine.time &&
+        (task.date || todayISO()) === date &&
+        (task.routineId && routine.id ? task.routineId === routine.id : task.title === routine.title && task.location === routine.location && task.time === routine.time) &&
         task.status !== "done"
       );
-      if (exists) return;
+      if (exists) return false;
 
       state.tasks.push({
         id: uid(),
         title: routine.title,
         assignee,
-        date: state.selectedDate,
+        date,
         location: routine.location,
         time: routine.time,
         endTime: routine.endTime || "",
+        routineId: routine.id || "",
         prep: routine.prep || suggestPrep(routine.title, routine.location),
         prepReminderSent: false,
         status: "todo",
         urgent: false
       });
-      notifyAssignee(assignee, routine.title, {
-        date: state.selectedDate,
+      if (notify) notifyAssignee(assignee, routine.title, {
+        date,
         time: routine.time,
         endTime: routine.endTime || ""
       });
-      save();
-      render();
+      return true;
     }
 
     function generateAllRoutines() {
       const addedByPerson = {};
       Object.entries(dailyRoutines).forEach(([assignee, routines]) => {
-        routines.forEach(routine => addRoutineTaskSilently(assignee, routine));
+        routines.forEach(routine => addRoutineTask(assignee, routine, state.selectedDate, false));
         addedByPerson[assignee] = state.tasks.filter(task =>
           task.assignee === assignee &&
           (task.date || todayISO()) === state.selectedDate &&
@@ -3710,28 +3827,7 @@
     }
 
     function addRoutineTaskSilently(assignee, routine) {
-      const exists = state.tasks.some(task =>
-        task.assignee === assignee &&
-        (task.date || todayISO()) === state.selectedDate &&
-        task.title === routine.title &&
-        task.location === routine.location &&
-        task.time === routine.time &&
-        task.status !== "done"
-      );
-      if (exists) return;
-      state.tasks.push({
-        id: uid(),
-        title: routine.title,
-        assignee,
-        date: state.selectedDate,
-        location: routine.location,
-        time: routine.time,
-        endTime: routine.endTime || "",
-        prep: routine.prep || suggestPrep(routine.title, routine.location),
-        prepReminderSent: false,
-        status: "todo",
-        urgent: false
-      });
+      addRoutineTask(assignee, routine, state.selectedDate, false);
     }
 
     function createTaskForAssignee(task) {
@@ -3778,6 +3874,7 @@
         requestText,
         requestFrom,
         requestCreatedAt: requestText ? (requestCreatedAt || Date.now()) : 0,
+        routineId: "",
         prep: prep || suggestPrep(title, location),
         prepReminderSent: false,
         status: "todo",
@@ -4233,6 +4330,19 @@
 
     function generateKidsTomorrowText() {
       generateKidsScheduleText(addDays(state.selectedDate, 1), "明天小朋友");
+    }
+
+    function generateSelectedMemberText(date, label) {
+      if (state.selectedMember === "all") return;
+      openGeneratedTextSheet(`${memberById(state.selectedMember).name} ${label}`, scheduleTextForMembers([state.selectedMember], date, date));
+    }
+
+    function generateMemberTodayText() {
+      generateSelectedMemberText(state.selectedDate, "今天文字");
+    }
+
+    function generateMemberTomorrowText() {
+      generateSelectedMemberText(addDays(state.selectedDate, 1), "明天文字");
     }
 
     function openGeneratedTextSheet(title, text) {
@@ -5490,7 +5600,7 @@
       if (memberBox && memberList) {
         const memberTasks = dayTasks.filter(task => task.assignee === state.selectedMember);
         const memberRows = priorityRowsFor(memberTasks);
-        memberBox.hidden = !(state.selectedMember !== "all" && memberRows.length);
+        memberBox.hidden = state.selectedMember === "all";
         memberList.innerHTML = "";
         memberRows.forEach(row => memberList.appendChild(createPriorityRow(row)));
       }
@@ -5969,6 +6079,7 @@
       try {
         pruneExpiredFeedbacks();
         pruneOldRawRequests();
+        syncRecurringRoutines();
         document.querySelectorAll("[data-date-text]").forEach(element => {
           element.textContent = selectedDateDisplayText();
         });
@@ -5999,6 +6110,23 @@
           list.innerHTML = `<div class="empty">页面显示遇到问题：${error.message}</div>`;
         }
         throw error;
+      }
+    }
+
+    function syncRecurringRoutines() {
+      const dates = state.rangeMode === "week" ? datesForSelectedWeek() : [state.selectedDate];
+      let changed = false;
+      Object.entries(dailyRoutines).forEach(([assignee, routines]) => {
+        routines.forEach(routine => {
+          if (!routine.id) routine.id = uid();
+          dates.forEach(date => {
+            if (addRoutineTask(assignee, routine, date, false)) changed = true;
+          });
+        });
+      });
+      if (changed) {
+        localStorage.setItem("familyTasks", JSON.stringify(state.tasks));
+        localStorage.setItem("familyRoutines", JSON.stringify(dailyRoutines));
       }
     }
 
@@ -6152,6 +6280,10 @@
 
     document.getElementById("generateKidsTomorrowTextBtn").addEventListener("click", generateKidsTomorrowText);
 
+    document.getElementById("memberTodayTextBtn").addEventListener("click", generateMemberTodayText);
+
+    document.getElementById("memberTomorrowTextBtn").addEventListener("click", generateMemberTomorrowText);
+
     document.getElementById("copyExportTextBtn").addEventListener("click", async () => {
       const textarea = document.getElementById("exportText");
       if (!textarea.value.trim()) exportScheduleText();
@@ -6193,20 +6325,25 @@
       if (ownerId === "all") return;
       const title = document.getElementById("routineName").value.trim();
       if (!title) return;
-      const location = document.getElementById("routineLocation").value;
+      const assignees = state.editingRoutineIndex === null ? selectedRoutineAssignees() : [ownerId];
+      const location = normalizeLocationIds(selectedValues(document.getElementById("routineLocation")));
       const routine = {
+        id: state.editingRoutineIndex === null ? uid() : (dailyRoutines[ownerId][state.editingRoutineIndex].id || uid()),
         title,
         time: document.getElementById("routineTime").value || "09:00",
         endTime: document.getElementById("routineNoEndTime").checked ? "" : document.getElementById("routineEndTime").value,
         location,
+        weekdays: selectedRoutineWeekdays(),
         prep: document.getElementById("routinePrep").value.trim() || suggestPrep(title, location)
       };
-      if (!dailyRoutines[ownerId]) {
-        dailyRoutines[ownerId] = [];
-      }
       if (state.editingRoutineIndex === null) {
-        dailyRoutines[ownerId].push(routine);
+        assignees.forEach(assignee => {
+          if (!dailyRoutines[assignee]) dailyRoutines[assignee] = [];
+          dailyRoutines[assignee].push({ ...routine, id: uid() });
+        });
       } else {
+        const oldRoutine = dailyRoutines[ownerId][state.editingRoutineIndex];
+        removeRoutineFutureTasks(oldRoutine && oldRoutine.id);
         dailyRoutines[ownerId][state.editingRoutineIndex] = routine;
       }
       resetRoutineForm();
@@ -6216,7 +6353,7 @@
 
     document.getElementById("routineName").addEventListener("input", () => {
       const title = document.getElementById("routineName").value.trim();
-      const location = document.getElementById("routineLocation").value;
+      const location = normalizeLocationIds(selectedValues(document.getElementById("routineLocation")));
       const prep = document.getElementById("routinePrep");
       if (!prep.value.trim() && title) {
         prep.placeholder = suggestPrep(title, location);
@@ -6227,7 +6364,7 @@
       const title = document.getElementById("routineName").value.trim();
       const prep = document.getElementById("routinePrep");
       if (!prep.value.trim() && title) {
-        prep.placeholder = suggestPrep(title, document.getElementById("routineLocation").value);
+        prep.placeholder = suggestPrep(title, normalizeLocationIds(selectedValues(document.getElementById("routineLocation"))));
       }
     });
 
