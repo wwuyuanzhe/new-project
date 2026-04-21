@@ -1760,10 +1760,17 @@
       .schedule-form .field:nth-child(1),
       .schedule-form .field:nth-child(2),
       .schedule-form .field:nth-child(3),
-      .schedule-form .field:nth-child(6),
       .schedule-form .field:nth-child(9),
       .schedule-form .primary {
         grid-column: 1 / -1;
+      }
+
+      .schedule-form .time-field {
+        align-self: start;
+      }
+
+      .schedule-form .time-field .inline-option {
+        min-height: 26px;
       }
 
       input,
@@ -4199,35 +4206,45 @@
       if (!task.groupId) return "";
       const groupTasks = state.tasks.filter(item => item.groupId === task.groupId);
       if (!groupTasks.length) return "";
-      const people = groupTasks
-        .filter(item => /本人/.test(item.relationLabel || ""))
-        .map(item => memberById(item.assignee).name);
       const rides = groupTasks
-        .filter(item => /接送/.test(item.relationLabel || ""))
+        .filter(item => /接送|送|接/.test(item.relationLabel || "") || ["driver", "driverLei"].includes(item.assignee))
         .map(item => memberById(item.assignee).name);
       const executors = groupTasks
-        .filter(item => /执行|陪同|跟进/.test(item.relationLabel || ""))
+        .filter(item => /执行|陪同|跟进/.test(item.relationLabel || "") || ["helperA", "helperB", "helperC", "kk", "chef"].includes(item.assignee))
         .map(item => memberById(item.assignee).name);
       const unique = list => [...new Set(list)].join("、");
       return [
-        people.length ? `<span class="badge">人员：${unique(people)}</span>` : "",
         rides.length ? `<span class="badge">接送：${unique(rides)}</span>` : "",
         executors.length ? `<span class="badge">陪同/执行：${unique(executors)}</span>` : ""
       ].join("");
     }
 
+    function taskMetaBadges(task) {
+      const assignee = memberById(task.assignee);
+      const showAssignee = state.selectedMember === "all";
+      const dateBadge = isWeekRange() ? `<span class="badge">${dateShortText(task.date || todayISO())}</span>` : "";
+      const assigneeBadge = showAssignee ? `<span class="badge">${assignee.name}</span>` : "";
+      const locationBadge = task.location && task.location !== "none"
+        ? `<span class="badge">${locationById(task.location)}</span>`
+        : "";
+      const relationBadges = relationSummaryBadges(task);
+      const followUpBadge = !task.groupId && shouldShowFollowUp(task) && task.followUp && task.followUp !== "none"
+        ? `<span class="badge">陪同/执行：${followUpText(task.followUp || inferFollowUp(task))}</span>`
+        : "";
+      const assignedBadge = task.assignedAt ? `<span class="badge">已分配</span>` : "";
+      return [
+        dateBadge,
+        `<span class="badge">${taskTimeText(task)}</span>`,
+        assigneeBadge,
+        relationBadges,
+        followUpBadge,
+        locationBadge,
+        assignedBadge
+      ].join("");
+    }
+
     function createTaskCard(task) {
-        const assignee = memberById(task.assignee);
         const prep = task.prep || suggestPrep(task.title, task.location);
-        const locationBadge = task.location && task.location !== "none"
-          ? `<span class="badge">${locationById(task.location)}</span>`
-          : "";
-        const followUpBadge = shouldShowFollowUp(task)
-          ? `<span class="badge">${appLanguage === "en" ? "Follow-up" : "跟进人"}：${followUpText(task.followUp || inferFollowUp(task))}</span>`
-          : "";
-        const dateBadge = isWeekRange() ? `<span class="badge">${dateShortText(task.date || todayISO())}</span>` : "";
-        const assignedBadge = task.assignedAt ? `<span class="badge">已分配</span>` : "";
-        const relationBadges = relationSummaryBadges(task);
         const canOperate = canOperateTask(task);
         const canManage = canManageTask(task);
         const card = document.createElement("article");
@@ -4237,13 +4254,7 @@
             <div>
               <h3 class="task-title">${displayTaskTitle(task)}</h3>
               <div class="task-meta">
-                ${dateBadge}
-                <span class="badge">${taskTimeText(task)}</span>
-                <span class="badge">${assignee.name}</span>
-                ${locationBadge}
-                ${followUpBadge}
-                ${assignedBadge}
-                ${relationBadges}
+                ${taskMetaBadges(task)}
               </div>
             </div>
             <span class="badge status ${task.status === "done" ? "done" : ""}">${statusText(task.status)}</span>
